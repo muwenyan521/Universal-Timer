@@ -1,0 +1,25 @@
+<UI version="4.0" >
+ <class>ExamCountdown_v1Class</class>
+ <widget class="QWidget" name="ExamCountdown_v1Class" >
+  <property name="objectName" >
+   <string notr="true">ExamCountdown_v1Class</string>
+  </property>
+  <property name="geometry" >
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>600</width>
+    <height>400</height>
+   </rect>
+  </property>
+  <property name="windowTitle" >
+   <string>ExamCountdown_v1</string>
+  </property>$centralwidget$
+ </widget>
+ <layoutDefault spacing="6" margin="11" />
+ <pixmapfunction></pixmapfunction>
+ <resources>
+   <include location="ExamCountdown_v1.qrc"/>
+ </resources>
+ <connections/>
+</UI>
