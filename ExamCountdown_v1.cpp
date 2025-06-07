@@ -6,6 +6,7 @@
 #include <QDateTime>
 #include <QTimer>
 #include <QGraphicsEffect>
+#include <QSoundEffect>
 
 ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
     : QWidget(parent)
@@ -18,8 +19,8 @@ ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
     this->setAttribute(Qt::WA_TranslucentBackground);
     this->setStyleSheet("font-family: DIN1451, Microsoft Yahei UI;");
 
-    int borderRadius = 5;
-    int border = 1;
+    borderRadius = 5;
+    border = 1;
     QFont font;
     font.setPixelSize(20);
     font.setWeight(QFont::Bold);
@@ -53,6 +54,13 @@ ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
     // 将秒数转换为格式d天h时m分s秒
     timeDifferenceString = QString::number(timeDifference / 86400) + QString::fromLocal8Bit(" 天 ") + QString::number((timeDifference % 86400) / 3600) + QString::fromLocal8Bit(" 时 ") + QString::number((timeDifference % 3600) / 60) + QString::fromLocal8Bit(" 分 ") + QString::number(timeDifference % 60) + QString::fromLocal8Bit(" 秒");
 
+
+
+
+    CountdownSoundEffect = new QSoundEffect(this);
+    CountdownSoundEffect->setSource(QUrl::fromLocalFile("audio/countdown.wav"));
+    HeartbeatSoundEffect = new QSoundEffect(this);
+    HeartbeatSoundEffect->setSource(QUrl::fromLocalFile("audio/heartbeat.wav"));
 
 
 
@@ -289,6 +297,8 @@ ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
     StartWindowBlockLabel4OpacityAnimation4->setEndValue(0.05);
 
 
+
+
     
     StartWindowAnimationGroup = new QSequentialAnimationGroup;
     StartWindowAnimationGroup->addAnimation(StartWindowStartOpacityAnimation);
@@ -323,6 +333,7 @@ ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
     StartWindowBlockLabel4AnimationGroup->addAnimation(StartWindowBlockLabel4OpacityAnimation2);
     StartWindowBlockLabel4AnimationGroup->addAnimation(StartWindowBlockLabel4OpacityAnimation3);
     StartWindowBlockLabel4AnimationGroup->addAnimation(StartWindowBlockLabel4OpacityAnimation4);
+
 
 
 
@@ -386,7 +397,7 @@ ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
         StartWindowBlockLabel4->hide();
         });
     connect(StartWindowBlockLabel1AnimationGroup, &QSequentialAnimationGroup::finished, [&] {
-        if (BlockLabelShowTimes <= 3) {
+        if (BlockLabelShowTimes <= 2) {
             BlockLabelShowTimes++;
             StartWindowBlockLabel1AnimationGroup->stop();
             StartWindowBlockLabel2AnimationGroup->stop();
@@ -397,6 +408,10 @@ ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
             StartWindowBlockLabel3AnimationGroup->start();
             StartWindowBlockLabel4AnimationGroup->start();
         }
+        });
+    connect(StartWindowBlockLabel1OpacityAnimation1, &QPropertyAnimation::finished, [&] {
+        CountdownSoundEffect->play();
+        if (BlockLabelShowTimes % 2 == 0 && (timeDifference / 86400 + 1) <= 14) HeartbeatSoundEffect->play();
         });
 
 
@@ -425,4 +440,5 @@ void ExamCountdown_v1::updateLabel() {
         SmallWindowCloseOpacityAnimation->start();
         StartWindowAnimationGroup->start();
     }
+
 }

@@ -9,6 +9,7 @@
 #include <QSequentialAnimationGroup>
 #include <QParallelAnimationGroup>
 #include <QGraphicsEffect>
+#include <QSoundEffect>
 
 class ExamCountdown_v1 : public QWidget
 {
@@ -30,6 +31,12 @@ private:
     QString timeDifferenceString;
 
     int BlockLabelShowTimes;
+
+    int borderRadius;
+    int border;
+
+    QSoundEffect* CountdownSoundEffect;
+    QSoundEffect* HeartbeatSoundEffect;
 
 
     QGraphicsOpacityEffect* NumberLabelOpacityEffect;
@@ -71,6 +78,7 @@ private:
     QPropertyAnimation* StartWindowBlockLabel4OpacityAnimation4;
 
 
+
     QSequentialAnimationGroup* StartWindowAnimationGroup;
     QSequentialAnimationGroup* StartWindowNumberLabelAnimationGroup;
 
@@ -78,6 +86,7 @@ private:
     QSequentialAnimationGroup* StartWindowBlockLabel2AnimationGroup;
     QSequentialAnimationGroup* StartWindowBlockLabel3AnimationGroup;
     QSequentialAnimationGroup* StartWindowBlockLabel4AnimationGroup;
+
 
 
 
