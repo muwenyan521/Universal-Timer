@@ -10,6 +10,8 @@
 #include <QParallelAnimationGroup>
 #include <QGraphicsEffect>
 #include <QSoundEffect>
+#include <QMouseEvent>
+#include <QRect>
 
 class ExamCountdown_v1 : public QWidget
 {
@@ -24,6 +26,8 @@ private:
 
     void updateLabel();
 
+    QRect desktop;
+
     QDateTime currentDateTime;
     QString currentDateTimeString;
     QDateTime targetDateTime;
@@ -34,6 +38,15 @@ private:
 
     int borderRadius;
     int border;
+
+
+    QString SmallWindowText;
+    QString StartWindowText;
+    QString StartWindowEnglishText;
+
+    QString all;
+    QStringList line;
+    QStringList list;
 
     QSoundEffect* CountdownSoundEffect;
     QSoundEffect* HeartbeatSoundEffect;
@@ -111,4 +124,14 @@ private:
     QLabel* StartWindowBlockLabel3;
     QLabel* StartWindowBlockLabel4;
 
+
+
+
+
+    float startX;
+    float startY;
+protected:
+    void mousePressEvent(QMouseEvent* event);
+    void mouseMoveEvent(QMouseEvent* event);
+    void mouseReleaseEvent(QMouseEvent* event);
 };

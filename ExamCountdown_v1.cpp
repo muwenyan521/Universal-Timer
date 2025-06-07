@@ -5,16 +5,20 @@
 #include <QDesktopWidget>
 #include <QDateTime>
 #include <QTimer>
+#include <QThread>
 #include <QGraphicsEffect>
 #include <QSoundEffect>
+#include <QFile>
+#include <QTextStream>
+#include <QMessageBox>
 
 ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
     : QWidget(parent)
 {
     ui.setupUi(this); 
     // 窗口设置
-    QRect desktop = QApplication::desktop()->screenGeometry();
-    this->setGeometry(desktop.width() * 0.3875, -desktop.height() * 0.05, desktop.width() * 0.28275, desktop.height() * 0.05);
+    desktop = QApplication::desktop()->screenGeometry();
+    this->setGeometry(desktop.width() * 0.38625, -desktop.height() * 0.05, desktop.width() * 0.28275, desktop.height() * 0.05);
     this->setWindowFlags(Qt::FramelessWindowHint | Qt::Tool | Qt::WindowStaysOnTopHint);
     this->setAttribute(Qt::WA_TranslucentBackground);
     this->setStyleSheet("font-family: DIN1451, Microsoft Yahei UI;");
@@ -26,6 +30,7 @@ ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
     font.setWeight(QFont::Bold);
 
     BlockLabelShowTimes = 0;
+
 
 
 
@@ -43,6 +48,9 @@ ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
 
 
 
+    SmallWindowText = QString::fromLocal8Bit("会考倒计时：");
+    StartWindowText = QString::fromLocal8Bit("距会考");
+    StartWindowEnglishText = "THE EXAM IN ";
 
 
     // 获取系统时间
@@ -58,9 +66,37 @@ ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
 
 
     CountdownSoundEffect = new QSoundEffect(this);
-    CountdownSoundEffect->setSource(QUrl::fromLocalFile("audio/countdown.wav"));
+    CountdownSoundEffect->setSource(QUrl::fromLocalFile("sounds/countdown.wav"));
     HeartbeatSoundEffect = new QSoundEffect(this);
-    HeartbeatSoundEffect->setSource(QUrl::fromLocalFile("audio/heartbeat.wav"));
+    HeartbeatSoundEffect->setSource(QUrl::fromLocalFile("sounds/heartbeat.wav"));
+
+
+    
+
+
+
+    /*QFile file("config.ini");
+    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QTextStream in(&file);
+        all = in.readAll().toLocal8Bit();
+        line = all.split("\n");
+        for (int i = 0; i < line.size(); i++) {
+            list = line[i].split("=");
+            if (list[0] == "SmallWindowText")
+                SmallWindowText = list[1];
+            else if (list[0] == "StartWindowText")
+                StartWindowText = list[1];
+            else if (list[0] == "StartWindowEnglishText")
+                StartWindowEnglishText = list[1];
+            else if (list[0] == "targetDateTime")
+                targetDateTime = QDateTime::fromString(list[1], "yyyy-M-d h:m:ss");
+        }
+        file.close();
+    }
+    else {
+        QMessageBox::critical(NULL, QString::fromLocal8Bit("错误"), QString::fromLocal8Bit("无法打开配置文件 config.ini，将使用默认配置。"));
+    }
+    */
 
 
 
@@ -82,7 +118,7 @@ ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
     border = this->height() * 0.05;
     SmallWindowLabel->setStyleSheet("background-color: rgba(255, 255, 255, 0.5); border-radius: " + QString::number(borderRadius) + "px; border: " + QString::number(border) + "px solid rgba(255, 255, 255, 0.75); color: rgb(200, 0, 0);");
     SmallWindowLabel->setAlignment(Qt::AlignCenter);
-    SmallWindowLabel->setText(QString::fromLocal8Bit("会考倒计时：") + timeDifferenceString);
+    SmallWindowLabel->setText(QString::fromUtf8(SmallWindowText.toUtf8()) + timeDifferenceString);
     font.setPixelSize(this->height() * 0.6);
     SmallWindowLabel->setFont(font);
     SmallWindowLabel->show();
@@ -99,7 +135,7 @@ ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
     StartWindowTextLabel1 = new QLabel(StartWindow);
     StartWindowTextLabel1->setGeometry(desktop.width() * 0.125, desktop.height() * 0.25, desktop.width() * 0.6, desktop.height() * 0.2);
     StartWindowTextLabel1->setStyleSheet("font-family: zihun59hao-chuangcuhei; color: white;");
-    StartWindowTextLabel1->setText(QString::fromLocal8Bit("距会考"));
+    StartWindowTextLabel1->setText(StartWindowText);
     font.setWeight(QFont::Normal);
     font.setPixelSize(desktop.height() * 0.2);
     StartWindowTextLabel1->setFont(font);
@@ -131,7 +167,7 @@ ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
     StartWindowTextLabelEnglish = new QLabel(StartWindow);
     StartWindowTextLabelEnglish->setGeometry(desktop.width() * 0.1375 + desktop.height() * 0.2, desktop.height() * 0.65, desktop.width() * 0.6, desktop.height() * 0.05);
     StartWindowTextLabelEnglish->setStyleSheet("font-family: DIN1451; color: white;");
-    StartWindowTextLabelEnglish->setText("THE EXAM IN " + QString::number(timeDifference / 86400 + 1) + " DAYS");
+    StartWindowTextLabelEnglish->setText(StartWindowEnglishText + QString::number(timeDifference / 86400 + 1) + " DAYS");
     font.setPixelSize(desktop.height() * 0.05);
     StartWindowTextLabelEnglish->setFont(font);
     StartWindowTextLabelEnglish->hide();
@@ -408,6 +444,7 @@ ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
             StartWindowBlockLabel3AnimationGroup->start();
             StartWindowBlockLabel4AnimationGroup->start();
         }
+        else BlockLabelShowTimes = 0;
         });
     connect(StartWindowBlockLabel1OpacityAnimation1, &QPropertyAnimation::finished, [&] {
         CountdownSoundEffect->play();
@@ -426,19 +463,40 @@ void ExamCountdown_v1::updateLabel() {
     // 获取系统时间
     currentDateTime = QDateTime::currentDateTime();
     currentDateTimeString = currentDateTime.toString("yyyy-M-d h:m:ss");
-    // 将当前时间与6月30日0:0:00进行比较
-    targetDateTime = QDateTime::fromString("2025-6-30 0:0:00", "yyyy-M-d h:m:ss");
     timeDifference = currentDateTime.secsTo(targetDateTime);
     // 将秒数转换为格式d天h时m分s秒
     timeDifferenceString = QString::number(timeDifference / 86400) + QString::fromLocal8Bit(" 天 ") + QString::number((timeDifference % 86400) / 3600) + QString::fromLocal8Bit(" 时 ") + QString::number((timeDifference % 3600) / 60) + QString::fromLocal8Bit(" 分 ") + QString::number(timeDifference % 60) + QString::fromLocal8Bit(" 秒");
     // 更新标签文本
-    SmallWindowLabel->setText(QString::fromLocal8Bit("会考倒计时：") + timeDifferenceString);
+    SmallWindowLabel->setText(SmallWindowText + timeDifferenceString);
     StartWindowNumberLabel->setText(QString::number(timeDifference / 86400 + 1));
-    StartWindowTextLabelEnglish->setText("THE EXAM IN " + QString::number(timeDifference / 86400 + 1) + " DAYS");
+    StartWindowTextLabelEnglish->setText(StartWindowEnglishText + QString::number(timeDifference / 86400 + 1) + " DAYS");
     if ((currentDateTime.toString("h") == "8" && currentDateTime.toString("m") == "13" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "9" && currentDateTime.toString("m") == "3" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "9" && currentDateTime.toString("m") == "53" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "10" && currentDateTime.toString("m") == "43" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "11" && currentDateTime.toString("m") == "38" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "14" && currentDateTime.toString("m") == "20" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "15" && currentDateTime.toString("m") == "23" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "16" && currentDateTime.toString("m") == "13" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "17" && currentDateTime.toString("m") == "23" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "18" && currentDateTime.toString("m") == "6" && currentDateTime.toString("s") == "0")) {
         StartWindow->show();
         SmallWindowCloseOpacityAnimation->start();
         StartWindowAnimationGroup->start();
     }
 
+}
+
+
+
+
+void ExamCountdown_v1::mousePressEvent(QMouseEvent* event) {
+    QWidget::mousePressEvent(event);
+    this->startX = event->x();
+    this->startY = event->y();
+}
+
+void ExamCountdown_v1::mouseMoveEvent(QMouseEvent* event) {
+    QWidget::mouseMoveEvent(event);
+    float disX = event->x() - this->startX;
+    float disY = event->y() - this->startY;
+    this->move(this->x() + disX, this->y() + disY);
+}
+
+void ExamCountdown_v1::mouseReleaseEvent(QMouseEvent* event) {
+    QWidget::mouseReleaseEvent(event);
+    if (this->x() <= desktop.width() * 0.23908) this->move(0, 0);
+    else if (this->x() >= desktop.width() * 0.47817) this->move(desktop.width() - this->width(), 0);
+    else this->move(desktop.width() * 0.38625, 0);
 }
