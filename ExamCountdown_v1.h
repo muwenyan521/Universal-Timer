@@ -38,6 +38,8 @@ private:
 
     int borderRadius;
     int border;
+    
+    int SmallWindowPosition;
 
 
     QString SmallWindowText;
@@ -89,6 +91,8 @@ private:
     QPropertyAnimation* StartWindowBlockLabel4OpacityAnimation2;
     QPropertyAnimation* StartWindowBlockLabel4OpacityAnimation3;
     QPropertyAnimation* StartWindowBlockLabel4OpacityAnimation4;
+
+    QPropertyAnimation* SmallWindowMoveAnimation;
 
 
 

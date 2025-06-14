@@ -18,7 +18,7 @@ ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
     ui.setupUi(this); 
     // 窗口设置
     desktop = QApplication::desktop()->screenGeometry();
-    this->setGeometry(desktop.width() * 0.38625, -desktop.height() * 0.05, desktop.width() * 0.28275, desktop.height() * 0.05);
+    this->setGeometry(desktop.width() * 0.358625, -desktop.height() * 0.05, desktop.width() * 0.28275, desktop.height() * 0.05);
     this->setWindowFlags(Qt::FramelessWindowHint | Qt::Tool | Qt::WindowStaysOnTopHint);
     this->setAttribute(Qt::WA_TranslucentBackground);
     this->setStyleSheet("font-family: DIN1451, Microsoft Yahei UI;");
@@ -72,13 +72,15 @@ ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
 
 
     
+    SmallWindowPosition = 1;
 
 
 
-    /*QFile file("config.ini");
+
+    QFile file("config.ini");
     if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         QTextStream in(&file);
-        all = in.readAll().toLocal8Bit();
+        all = in.readAll();
         line = all.split("\n");
         for (int i = 0; i < line.size(); i++) {
             list = line[i].split("=");
@@ -90,14 +92,24 @@ ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
                 StartWindowEnglishText = list[1];
             else if (list[0] == "targetDateTime")
                 targetDateTime = QDateTime::fromString(list[1], "yyyy-M-d h:m:ss");
+            else if (list[0] == "SmallWindowPosition")
+                SmallWindowPosition = list[1].toInt();
         }
         file.close();
     }
     else {
-        QMessageBox::critical(NULL, QString::fromLocal8Bit("错误"), QString::fromLocal8Bit("无法打开配置文件 config.ini，将使用默认配置。"));
+        QMessageBox::information(NULL, QString::fromLocal8Bit("错误"), QString::fromLocal8Bit("未找到配置文件，将使用默认配置。"));
+        if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+            QTextStream out(&file);
+            out << "SmallWindowText=" << SmallWindowText << "\n";
+            out << "StartWindowText=" << StartWindowText << "\n";
+            out << "StartWindowEnglishText=" << StartWindowEnglishText << "\n";
+            out << "targetDateTime=" << targetDateTime.toString("yyyy-M-d h:m:ss") << "\n";
+            out << "SmallWindowPosition=" << SmallWindowPosition << "\n";
+            file.close();
+        }
     }
-    */
-
+    
 
 
 
@@ -207,9 +219,19 @@ ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
     // Animations
     SmallWindowStartAnimation = new QPropertyAnimation(this, "pos");
     SmallWindowStartAnimation->setDuration(1000);
-    SmallWindowStartAnimation->setStartValue(QPoint(desktop.width() * 0.3875, -desktop.height() * 0.05));
-    SmallWindowStartAnimation->setEndValue(QPoint(desktop.width() * 0.3875, 0));
     SmallWindowStartAnimation->setEasingCurve(QEasingCurve::OutBack);
+    if (SmallWindowPosition == 0) {
+        SmallWindowStartAnimation->setStartValue(QPoint(-desktop.width() * 0.28275, 0));
+        SmallWindowStartAnimation->setEndValue(QPoint(0, 0));
+    }
+    else if (SmallWindowPosition == 1) {
+        SmallWindowStartAnimation->setStartValue(QPoint(desktop.width() * 0.358625, -desktop.height() * 0.05));
+        SmallWindowStartAnimation->setEndValue(QPoint(desktop.width() * 0.358625, 0));
+    }
+    else if (SmallWindowPosition == 2) {
+        SmallWindowStartAnimation->setStartValue(QPoint(desktop.width(), 0));
+        SmallWindowStartAnimation->setEndValue(QPoint(desktop.width() * 0.71725, 0));
+    }
     SmallWindowStartOpacityAnimation = new QPropertyAnimation(this, "windowOpacity");
     SmallWindowStartOpacityAnimation->setDuration(1000);
     SmallWindowStartOpacityAnimation->setStartValue(0);
@@ -332,6 +354,10 @@ ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
     StartWindowBlockLabel4OpacityAnimation4->setStartValue(1);
     StartWindowBlockLabel4OpacityAnimation4->setEndValue(0.05);
 
+    SmallWindowMoveAnimation = new QPropertyAnimation(this, "pos");
+    SmallWindowMoveAnimation->setDuration(500);
+    SmallWindowMoveAnimation->setEasingCurve(QEasingCurve::OutBack);
+
 
 
 
@@ -388,7 +414,7 @@ ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
 
 
     // connects
-    // 每隔一秒更新LeftTopWindowLabel的文本
+    // 每隔一秒更新
     QTimer* timer = new QTimer(this);
     connect(timer, &QTimer::timeout, [=] {
         updateLabel();
@@ -483,6 +509,7 @@ void ExamCountdown_v1::updateLabel() {
 
 void ExamCountdown_v1::mousePressEvent(QMouseEvent* event) {
     QWidget::mousePressEvent(event);
+    SmallWindowMoveAnimation->stop();
     this->startX = event->x();
     this->startY = event->y();
 }
@@ -496,7 +523,52 @@ void ExamCountdown_v1::mouseMoveEvent(QMouseEvent* event) {
 
 void ExamCountdown_v1::mouseReleaseEvent(QMouseEvent* event) {
     QWidget::mouseReleaseEvent(event);
-    if (this->x() <= desktop.width() * 0.23908) this->move(0, 0);
-    else if (this->x() >= desktop.width() * 0.47817) this->move(desktop.width() - this->width(), 0);
-    else this->move(desktop.width() * 0.38625, 0);
+    if (this->x() <= desktop.width() * 0.23908) {
+        SmallWindowMoveAnimation->setStartValue(this->pos());
+        SmallWindowMoveAnimation->setEndValue(QPoint(0, 0));
+        SmallWindowMoveAnimation->start();
+        SmallWindowPosition = 0;
+        QFile file("config.ini");
+        if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+            QTextStream out(&file);
+            out << "SmallWindowText=" << SmallWindowText << "\n";
+            out << "StartWindowText=" << StartWindowText << "\n";
+            out << "StartWindowEnglishText=" << StartWindowEnglishText << "\n";
+            out << "targetDateTime=" << targetDateTime.toString("yyyy-M-d h:m:ss") << "\n";
+            out << "SmallWindowPosition=" << SmallWindowPosition << "\n";
+            file.close();
+        }
+    }
+    else if (this->x() >= desktop.width() * 0.47817) {
+        SmallWindowMoveAnimation->setStartValue(this->pos());
+        SmallWindowMoveAnimation->setEndValue(QPoint(desktop.width() - this->width(), 0));
+        SmallWindowMoveAnimation->start();
+        SmallWindowPosition = 2;
+        QFile file("config.ini");
+        if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+            QTextStream out(&file);
+            out << "SmallWindowText=" << SmallWindowText << "\n";
+            out << "StartWindowText=" << StartWindowText << "\n";
+            out << "StartWindowEnglishText=" << StartWindowEnglishText << "\n";
+            out << "targetDateTime=" << targetDateTime.toString("yyyy-M-d h:m:ss") << "\n";
+            out << "SmallWindowPosition=" << SmallWindowPosition << "\n";
+            file.close();
+        }
+    }
+    else {
+        SmallWindowMoveAnimation->setStartValue(this->pos());
+        SmallWindowMoveAnimation->setEndValue(QPoint((desktop.width() - this->width()) / 2, 0));
+        SmallWindowMoveAnimation->start();
+        SmallWindowPosition = 1;
+        QFile file("config.ini");
+        if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+            QTextStream out(&file);
+            out << "SmallWindowText=" << SmallWindowText << "\n";
+            out << "StartWindowText=" << StartWindowText << "\n";
+            out << "StartWindowEnglishText=" << StartWindowEnglishText << "\n";
+            out << "targetDateTime=" << targetDateTime.toString("yyyy-M-d h:m:ss") << "\n";
+            out << "SmallWindowPosition=" << SmallWindowPosition << "\n";
+            file.close();
+        }
+    }
 }
