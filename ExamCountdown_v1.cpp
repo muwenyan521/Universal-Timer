@@ -1,5 +1,7 @@
 #include "ExamCountdown_v1.h"
 #include <QLabel>
+#include <QPushButton>
+#include <QGroupBox>
 #include <QPropertyAnimation>
 #include <QSequentialAnimationGroup>
 #include <QDesktopWidget>
@@ -18,7 +20,8 @@ ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
     ui.setupUi(this); 
     // 窗口设置
     desktop = QApplication::desktop()->screenGeometry();
-    this->setGeometry(desktop.width() * 0.358625, -desktop.height() * 0.05, desktop.width() * 0.28275, desktop.height() * 0.05);
+    desktopAvailable = QApplication::desktop()->availableGeometry();
+    this->setGeometry(desktop.width() * 0.35, -desktop.height() * 0.05, desktop.width() * 0.3, desktop.height() * 0.05);
     this->setWindowFlags(Qt::FramelessWindowHint | Qt::Tool | Qt::WindowStaysOnTopHint);
     this->setAttribute(Qt::WA_TranslucentBackground);
     this->setStyleSheet("font-family: DIN1451, Microsoft Yahei UI;");
@@ -74,7 +77,12 @@ ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
     
     SmallWindowPosition = 1;
 
+    isSetting = false;
 
+    isCountdownAudio = true;
+    isHeartbeatAudio = true;
+    isShowBigWindow = true;
+    SmallWindowOnTopOrBottom = true;
 
 
     QFile file("config.ini");
@@ -94,6 +102,14 @@ ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
                 targetDateTime = QDateTime::fromString(list[1], "yyyy-M-d h:m:ss");
             else if (list[0] == "SmallWindowPosition")
                 SmallWindowPosition = list[1].toInt();
+            else if (list[0] == "isCountdownAudio")
+                isCountdownAudio = list[1].toInt();
+            else if (list[0] == "isHeartbeatAudio")
+                isHeartbeatAudio = list[1].toInt();
+            else if (list[0] == "isShowBigWindow")
+                isShowBigWindow = list[1].toInt();
+            else if (list[0] == "SmallWindowOnTopOrBottom")
+                SmallWindowOnTopOrBottom = list[1].toInt();
         }
         file.close();
     }
@@ -106,9 +122,14 @@ ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
             out << "StartWindowEnglishText=" << StartWindowEnglishText << "\n";
             out << "targetDateTime=" << targetDateTime.toString("yyyy-M-d h:m:ss") << "\n";
             out << "SmallWindowPosition=" << SmallWindowPosition << "\n";
+            out << "isCountdownAudio=" << isCountdownAudio << "\n";
+            out << "isHeartbeatAudio=" << isHeartbeatAudio << "\n";
+            out << "isShowBigWindow=" << isShowBigWindow << "\n";
+            out << "SmallWindowOnTopOrBottom=" << SmallWindowOnTopOrBottom << "\n";
             file.close();
         }
     }
+    this->setWindowFlags(Qt::FramelessWindowHint | Qt::Tool | (SmallWindowOnTopOrBottom ? Qt::WindowStaysOnTopHint : Qt::WindowStaysOnBottomHint));
     
 
 
@@ -118,22 +139,41 @@ ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
     StartWindow->setGeometry(0, 0, desktop.width(), desktop.height());
     StartWindow->setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
     StartWindow->setAttribute(Qt::WA_TranslucentBackground);
-    StartWindow->show();
+    if (isShowBigWindow) StartWindow->show();
+
+
+
+
+
+
+    LogoPixelMultiplier = desktop.width() * 0.25 / 2048;
+
 
 
     
 
     // Labels
-    SmallWindowLabel = new QLabel(this);
-    SmallWindowLabel->setGeometry(0, 0, this->width(), this->height());
+    SmallWindowUnderlyingLabel = new QLabel(this);
+    SmallWindowUnderlyingLabel->setGeometry(0, 0, this->width(),this->height());
     borderRadius = this->height() / 2;
-    border = this->height() * 0.05;
-    SmallWindowLabel->setStyleSheet("background-color: rgba(255, 255, 255, 0.5); border-radius: " + QString::number(borderRadius) + "px; border: " + QString::number(border) + "px solid rgba(255, 255, 255, 0.75); color: rgb(200, 0, 0);");
+    border = this->height() * 0.025;
+    SmallWindowUnderlyingLabel->setStyleSheet("background-color: rgba(235, 235, 235, 0.5); border-radius: " + QString::number(borderRadius) + "px; border: " + QString::number(border) + "px solid rgb(235, 235, 235); ");
+    SmallWindowUnderlyingLabel->show();
+    SmallWindowLabel = new QLabel(this);
+    SmallWindowLabel->setGeometry(0, 0, this->width()-this->height(), this->height());
+    SmallWindowLabel->setStyleSheet("color: rgb(200, 0, 0);");
     SmallWindowLabel->setAlignment(Qt::AlignCenter);
-    SmallWindowLabel->setText(QString::fromUtf8(SmallWindowText.toUtf8()) + timeDifferenceString);
+    SmallWindowLabel->setText(SmallWindowText + timeDifferenceString);
     font.setPixelSize(this->height() * 0.6);
     SmallWindowLabel->setFont(font);
     SmallWindowLabel->show();
+
+    SmallWindowLogoLabel = new QLabel(this);
+    SmallWindowLogoLabel->setGeometry(desktop.width() * 0.5625, (desktop.height() - 2682 * LogoPixelMultiplier) / 2, 2048 * LogoPixelMultiplier, 2682 * LogoPixelMultiplier);
+    SmallWindowLogoLabel->setPixmap(QPixmap("img/logo.black.2048px.png"));
+    SmallWindowLogoLabel->setScaledContents(true);
+    SmallWindowLogoLabel->show();
+
 
     StartWindowUnderlyingLabel = new QLabel(StartWindow);
     StartWindowUnderlyingLabel->setGeometry(0, 0, desktop.width(), desktop.height());
@@ -212,6 +252,42 @@ ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
 
 
 
+
+    // GroupBoxes
+    borderRadius = this->height() / 4;
+    border = this->height() * 0.025;
+    font.setPixelSize(this->height() * 0.1);
+    SmallWindowSettingTextGb = new QGroupBox(this);
+    SmallWindowSettingTextGb->setGeometry(this->width() * 0.1, this->height() * 2, desktop.width() * 0.3, desktop.height() * 0.15);
+    SmallWindowSettingTextGb->setStyleSheet("background-color: rgba(235, 235, 235, 0.5); border-radius: " + QString::number(borderRadius) + "px; border: " + QString::number(border) + "px solid rgb(235, 235, 235); ");
+    SmallWindowSettingTextGb->setTitle(QString::fromLocal8Bit("文本和时间"));
+    SmallWindowSettingTextGb->show();
+    SmallWindowSettingBigWindowGb = new QGroupBox(this);
+    SmallWindowSettingBigWindowGb->setGeometry(this->width() * 0.1, this->height() * 5.5, desktop.width() * 0.3, desktop.height() * 0.1);
+    SmallWindowSettingBigWindowGb->setStyleSheet("background-color: rgba(235, 235, 235, 0.5); border-radius: " + QString::number(borderRadius) + "px; border: " + QString::number(border) + "px solid rgb(235, 235, 235); ");
+    SmallWindowSettingBigWindowGb->setTitle(QString::fromLocal8Bit("全屏提醒"));
+    SmallWindowSettingBigWindowGb->show();
+    SmallWindowSettingSmallWindowOnTopOrBottomGb = new QGroupBox(this);
+    SmallWindowSettingSmallWindowOnTopOrBottomGb->setGeometry(this->width() * 0.1, this->height() * 8, desktop.width() * 0.3, desktop.height() * 0.15);
+    SmallWindowSettingSmallWindowOnTopOrBottomGb->setStyleSheet("background-color: rgba(235, 235, 235, 0.5); border-radius: " + QString::number(borderRadius) + "px; border: " + QString::number(border) + "px solid rgb(235, 235, 235); ");
+    SmallWindowSettingSmallWindowOnTopOrBottomGb->setTitle(QString::fromLocal8Bit("小窗口层级"));
+    SmallWindowSettingSmallWindowOnTopOrBottomGb->show();
+
+
+
+
+    // PushButtons
+    SmallWindowMoreInfBtn = new QPushButton(this);
+    SmallWindowMoreInfBtn->setGeometry(this->width() - this->height(), 0, this->height(), this->height());
+    borderRadius = this->height() / 2;
+    border = this->height() * 0.025;
+    SmallWindowMoreInfBtn->setStyleSheet("QPushButton{background-color: rgba(235, 235, 235, 0.5); border-radius: " + QString::number(borderRadius) + "px; border: " + QString::number(border) + "px solid rgb(235, 235, 235);} QPushButton:hover{background-color: rgba(255, 255, 255, 0.6);} QPushButton:pressed{background-color: rgba(100, 100, 100, 0.3);}");
+    SmallWindowMoreInfBtn->setIcon(QIcon("img/moreinf.png"));
+    SmallWindowMoreInfBtn->setIconSize(QSize(this->height() / 2, this->height() / 2));
+    font.setPixelSize(this->height());
+    SmallWindowMoreInfBtn->setFont(font);
+    SmallWindowMoreInfBtn->show();
+
     
     
     
@@ -221,27 +297,60 @@ ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
     SmallWindowStartAnimation->setDuration(1000);
     SmallWindowStartAnimation->setEasingCurve(QEasingCurve::OutBack);
     if (SmallWindowPosition == 0) {
-        SmallWindowStartAnimation->setStartValue(QPoint(-desktop.width() * 0.28275, 0));
+        SmallWindowStartAnimation->setStartValue(QPoint(-desktop.width() * 0.3, 0));
         SmallWindowStartAnimation->setEndValue(QPoint(0, 0));
     }
     else if (SmallWindowPosition == 1) {
-        SmallWindowStartAnimation->setStartValue(QPoint(desktop.width() * 0.358625, -desktop.height() * 0.05));
-        SmallWindowStartAnimation->setEndValue(QPoint(desktop.width() * 0.358625, 0));
+        SmallWindowStartAnimation->setStartValue(QPoint(desktop.width() * 0.35, -desktop.height() * 0.05));
+        SmallWindowStartAnimation->setEndValue(QPoint(desktop.width() * 0.35, 0));
     }
     else if (SmallWindowPosition == 2) {
         SmallWindowStartAnimation->setStartValue(QPoint(desktop.width(), 0));
-        SmallWindowStartAnimation->setEndValue(QPoint(desktop.width() * 0.71725, 0));
+        SmallWindowStartAnimation->setEndValue(QPoint(desktop.width() * 0.7, 0));
     }
     SmallWindowStartOpacityAnimation = new QPropertyAnimation(this, "windowOpacity");
     SmallWindowStartOpacityAnimation->setDuration(1000);
     SmallWindowStartOpacityAnimation->setStartValue(0);
     SmallWindowStartOpacityAnimation->setEndValue(1);
-    SmallWindowStartOpacityAnimation->setEasingCurve(QEasingCurve::OutCubic);
+    SmallWindowStartOpacityAnimation->setEasingCurve(QEasingCurve::InOutCubic);
     SmallWindowCloseOpacityAnimation = new QPropertyAnimation(this, "windowOpacity");
     SmallWindowCloseOpacityAnimation->setDuration(1000);
     SmallWindowCloseOpacityAnimation->setStartValue(1);
     SmallWindowCloseOpacityAnimation->setEndValue(0);
     SmallWindowCloseOpacityAnimation->setEasingCurve(QEasingCurve::OutCubic);
+
+    SmallWindowStartSettingAnimation = new QPropertyAnimation(this, "geometry");
+    SmallWindowStartSettingAnimation->setDuration(1000);
+    if (SmallWindowPosition == 0) 
+        SmallWindowStartSettingAnimation->setStartValue(QRect(0, 0, desktop.width() * 0.3, desktop.height() * 0.05));
+    else if (SmallWindowPosition == 1)
+        SmallWindowStartSettingAnimation->setStartValue(QRect(desktop.width() * 0.35, 0, desktop.width() * 0.3, desktop.height() * 0.05));
+    else if (SmallWindowPosition == 2)
+        SmallWindowStartSettingAnimation->setStartValue(QRect(desktop.width() * 0.7, 0, desktop.width() * 0.3, desktop.height() * 0.05));
+    SmallWindowStartSettingAnimation->setEndValue(QRect(0, 0, desktopAvailable.width(), desktopAvailable.height()));
+    SmallWindowStartSettingAnimation->setEasingCurve(QEasingCurve::OutCubic);
+    SmallWindowUnderlyingLabelStartSettingAnimation = new QPropertyAnimation(SmallWindowUnderlyingLabel, "geometry");
+    SmallWindowUnderlyingLabelStartSettingAnimation->setDuration(1000);
+    SmallWindowUnderlyingLabelStartSettingAnimation->setStartValue(QRect(0, 0, desktop.width() * 0.3, desktop.height() * 0.05));
+    SmallWindowUnderlyingLabelStartSettingAnimation->setEndValue(QRect(0, 0, desktopAvailable.width(), desktopAvailable.height()));
+    SmallWindowUnderlyingLabelStartSettingAnimation->setEasingCurve(QEasingCurve::OutCubic);
+
+    SmallWindowCloseSettingAnimation = new QPropertyAnimation(this, "geometry");
+    SmallWindowCloseSettingAnimation->setDuration(1000);
+    SmallWindowCloseSettingAnimation->setStartValue(QRect(0, 0, desktopAvailable.width(), desktopAvailable.height()));
+    if (SmallWindowPosition == 0)
+        SmallWindowCloseSettingAnimation->setEndValue(QRect(0, 0, desktop.width() * 0.3, desktop.height() * 0.05));
+    else if (SmallWindowPosition == 1)
+        SmallWindowCloseSettingAnimation->setEndValue(QRect(desktop.width() * 0.35, 0, desktop.width() * 0.3, desktop.height() * 0.05));
+    else if (SmallWindowPosition == 2)
+        SmallWindowCloseSettingAnimation->setEndValue(QRect(desktop.width() * 0.7, 0, desktop.width() * 0.3, desktop.height() * 0.05));
+    SmallWindowCloseSettingAnimation->setEasingCurve(QEasingCurve::OutCubic);
+    SmallWindowUnderlyingLabelCloseSettingAnimation = new QPropertyAnimation(SmallWindowUnderlyingLabel, "geometry");
+    SmallWindowUnderlyingLabelCloseSettingAnimation->setDuration(1000);
+    SmallWindowUnderlyingLabelCloseSettingAnimation->setStartValue(QRect(0, 0, desktopAvailable.width(), desktopAvailable.height()));
+    SmallWindowUnderlyingLabelCloseSettingAnimation->setEndValue(QRect(0, 0, desktop.width() * 0.3, desktop.height() * 0.05));
+    SmallWindowUnderlyingLabelCloseSettingAnimation->setEasingCurve(QEasingCurve::OutCubic);
+
 
     StartWindowStartOpacityAnimation = new QPropertyAnimation(StartWindow, "windowOpacity");
     StartWindowStartOpacityAnimation->setDuration(1000);
@@ -405,9 +514,12 @@ ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
     SmallWindowStartAnimationGroup->addAnimation(SmallWindowStartOpacityAnimation);
     
 
-    StartWindow->show();
 
-    StartWindowAnimationGroup->start();
+    if (isShowBigWindow) {
+        StartWindow->show();
+        StartWindowAnimationGroup->start();
+    }
+    else SmallWindowStartAnimationGroup->start();
 
 
 
@@ -473,10 +585,35 @@ ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
         else BlockLabelShowTimes = 0;
         });
     connect(StartWindowBlockLabel1OpacityAnimation1, &QPropertyAnimation::finished, [&] {
-        CountdownSoundEffect->play();
-        if (BlockLabelShowTimes % 2 == 0 && (timeDifference / 86400 + 1) <= 14) HeartbeatSoundEffect->play();
+        if (isCountdownAudio) CountdownSoundEffect->play();
+        if (BlockLabelShowTimes % 2 == 0 && (timeDifference / 86400 + 1) <= 14 && isHeartbeatAudio) HeartbeatSoundEffect->play();
         });
 
+    connect(SmallWindowMoreInfBtn, &QPushButton::clicked, [&] {
+        if (!isSetting) {
+            isSetting = true;
+            SmallWindowCloseSettingAnimation->stop();
+            SmallWindowUnderlyingLabelCloseSettingAnimation->stop();
+            SmallWindowStartSettingAnimation->setStartValue(QRect(this->x(), this->y(), this->width(), this->height()));
+            SmallWindowUnderlyingLabelStartSettingAnimation->setStartValue(QRect(0, 0, this->width(), this->height()));
+            SmallWindowStartSettingAnimation->start();
+            SmallWindowUnderlyingLabelStartSettingAnimation->start();
+        }
+        else {
+            isSetting = false;
+            SmallWindowStartSettingAnimation->stop();
+            SmallWindowUnderlyingLabelStartSettingAnimation->stop();
+            if (SmallWindowPosition == 0)
+                SmallWindowCloseSettingAnimation->setEndValue(QRect(0, 0, desktop.width() * 0.3, desktop.height() * 0.05));
+            else if (SmallWindowPosition == 1)
+                SmallWindowCloseSettingAnimation->setEndValue(QRect(desktop.width() * 0.35, 0, desktop.width() * 0.3, desktop.height() * 0.05));
+            else if (SmallWindowPosition == 2)
+                SmallWindowCloseSettingAnimation->setEndValue(QRect(desktop.width() * 0.7, 0, desktop.width() * 0.3, desktop.height() * 0.05));
+            SmallWindowUnderlyingLabelCloseSettingAnimation->setStartValue(QRect(0, 0, this->width(), this->height()));
+            SmallWindowCloseSettingAnimation->start();
+            SmallWindowUnderlyingLabelCloseSettingAnimation->start();
+        }
+        });
 
 
 }
@@ -496,7 +633,7 @@ void ExamCountdown_v1::updateLabel() {
     SmallWindowLabel->setText(SmallWindowText + timeDifferenceString);
     StartWindowNumberLabel->setText(QString::number(timeDifference / 86400 + 1));
     StartWindowTextLabelEnglish->setText(StartWindowEnglishText + QString::number(timeDifference / 86400 + 1) + " DAYS");
-    if ((currentDateTime.toString("h") == "8" && currentDateTime.toString("m") == "13" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "9" && currentDateTime.toString("m") == "3" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "9" && currentDateTime.toString("m") == "53" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "10" && currentDateTime.toString("m") == "43" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "11" && currentDateTime.toString("m") == "38" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "14" && currentDateTime.toString("m") == "20" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "15" && currentDateTime.toString("m") == "23" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "16" && currentDateTime.toString("m") == "13" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "17" && currentDateTime.toString("m") == "23" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "18" && currentDateTime.toString("m") == "6" && currentDateTime.toString("s") == "0")) {
+    if (((currentDateTime.toString("h") == "8" && currentDateTime.toString("m") == "13" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "9" && currentDateTime.toString("m") == "3" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "9" && currentDateTime.toString("m") == "53" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "10" && currentDateTime.toString("m") == "43" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "11" && currentDateTime.toString("m") == "38" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "14" && currentDateTime.toString("m") == "20" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "15" && currentDateTime.toString("m") == "23" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "16" && currentDateTime.toString("m") == "13" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "17" && currentDateTime.toString("m") == "23" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "18" && currentDateTime.toString("m") == "6" && currentDateTime.toString("s") == "0")) && isShowBigWindow) {
         StartWindow->show();
         SmallWindowCloseOpacityAnimation->start();
         StartWindowAnimationGroup->start();
@@ -518,48 +655,36 @@ void ExamCountdown_v1::mouseMoveEvent(QMouseEvent* event) {
     QWidget::mouseMoveEvent(event);
     float disX = event->x() - this->startX;
     float disY = event->y() - this->startY;
-    this->move(this->x() + disX, this->y() + disY);
+    if (!isSetting) this->move(this->x() + disX, this->y() + disY);
 }
 
 void ExamCountdown_v1::mouseReleaseEvent(QMouseEvent* event) {
     QWidget::mouseReleaseEvent(event);
-    if (this->x() <= desktop.width() * 0.23908) {
-        SmallWindowMoveAnimation->setStartValue(this->pos());
-        SmallWindowMoveAnimation->setEndValue(QPoint(0, 0));
-        SmallWindowMoveAnimation->start();
-        SmallWindowPosition = 0;
-        QFile file("config.ini");
-        if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-            QTextStream out(&file);
-            out << "SmallWindowText=" << SmallWindowText << "\n";
-            out << "StartWindowText=" << StartWindowText << "\n";
-            out << "StartWindowEnglishText=" << StartWindowEnglishText << "\n";
-            out << "targetDateTime=" << targetDateTime.toString("yyyy-M-d h:m:ss") << "\n";
-            out << "SmallWindowPosition=" << SmallWindowPosition << "\n";
-            file.close();
+    if (!isSetting) {
+        if (this->x() <= desktop.width() * 0.233333) {
+            SmallWindowMoveAnimation->setStartValue(this->pos());
+            SmallWindowMoveAnimation->setEndValue(QPoint(0, 0));
+            SmallWindowMoveAnimation->start();
+            SmallWindowPosition = 0;
+            SmallWindowStartAnimation->setStartValue(QPoint(-desktop.width() * 0.3, 0));
+            SmallWindowStartAnimation->setEndValue(QPoint(0, 0));
         }
-    }
-    else if (this->x() >= desktop.width() * 0.47817) {
-        SmallWindowMoveAnimation->setStartValue(this->pos());
-        SmallWindowMoveAnimation->setEndValue(QPoint(desktop.width() - this->width(), 0));
-        SmallWindowMoveAnimation->start();
-        SmallWindowPosition = 2;
-        QFile file("config.ini");
-        if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-            QTextStream out(&file);
-            out << "SmallWindowText=" << SmallWindowText << "\n";
-            out << "StartWindowText=" << StartWindowText << "\n";
-            out << "StartWindowEnglishText=" << StartWindowEnglishText << "\n";
-            out << "targetDateTime=" << targetDateTime.toString("yyyy-M-d h:m:ss") << "\n";
-            out << "SmallWindowPosition=" << SmallWindowPosition << "\n";
-            file.close();
+        else if (this->x() >= desktop.width() * 0.466667) {
+            SmallWindowMoveAnimation->setStartValue(this->pos());
+            SmallWindowMoveAnimation->setEndValue(QPoint(desktop.width() - this->width(), 0));
+            SmallWindowMoveAnimation->start();
+            SmallWindowPosition = 2;
+            SmallWindowStartAnimation->setStartValue(QPoint(desktop.width(), 0));
+            SmallWindowStartAnimation->setEndValue(QPoint(desktop.width() * 0.7, 0));
         }
-    }
-    else {
-        SmallWindowMoveAnimation->setStartValue(this->pos());
-        SmallWindowMoveAnimation->setEndValue(QPoint((desktop.width() - this->width()) / 2, 0));
-        SmallWindowMoveAnimation->start();
-        SmallWindowPosition = 1;
+        else {
+            SmallWindowMoveAnimation->setStartValue(this->pos());
+            SmallWindowMoveAnimation->setEndValue(QPoint((desktop.width() - this->width()) / 2, 0));
+            SmallWindowMoveAnimation->start();
+            SmallWindowPosition = 1;
+            SmallWindowStartAnimation->setStartValue(QPoint(desktop.width() * 0.35, -desktop.height() * 0.05));
+            SmallWindowStartAnimation->setEndValue(QPoint(desktop.width() * 0.35, 0));
+        }
         QFile file("config.ini");
         if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
             QTextStream out(&file);
@@ -568,6 +693,10 @@ void ExamCountdown_v1::mouseReleaseEvent(QMouseEvent* event) {
             out << "StartWindowEnglishText=" << StartWindowEnglishText << "\n";
             out << "targetDateTime=" << targetDateTime.toString("yyyy-M-d h:m:ss") << "\n";
             out << "SmallWindowPosition=" << SmallWindowPosition << "\n";
+            out << "isCountdownAudio=" << isCountdownAudio << "\n";
+            out << "isHeartbeatAudio=" << isHeartbeatAudio << "\n";
+            out << "isShowBigWindow=" << isShowBigWindow << "\n";
+            out << "SmallWindowOnTopOrBottom=" << SmallWindowOnTopOrBottom << "\n";
             file.close();
         }
     }

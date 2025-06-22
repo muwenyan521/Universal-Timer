@@ -3,6 +3,8 @@
 #include <QtWidgets/QWidget>
 #include "ui_ExamCountdown_v1.h"
 #include <QLabel>
+#include <QPushButton>
+#include <QGroupBox>
 #include <QDateTime>
 #include <QTimer>
 #include <QPropertyAnimation>
@@ -27,6 +29,7 @@ private:
     void updateLabel();
 
     QRect desktop;
+    QRect desktopAvailable;
 
     QDateTime currentDateTime;
     QString currentDateTimeString;
@@ -40,6 +43,12 @@ private:
     int border;
     
     int SmallWindowPosition;
+
+    bool isSetting;
+
+    bool isCountdownAudio, isHeartbeatAudio, isShowBigWindow, SmallWindowOnTopOrBottom;
+
+    int LogoPixelMultiplier;
 
 
     QString SmallWindowText;
@@ -94,6 +103,12 @@ private:
 
     QPropertyAnimation* SmallWindowMoveAnimation;
 
+    QPropertyAnimation* SmallWindowStartSettingAnimation;
+    QPropertyAnimation* SmallWindowUnderlyingLabelStartSettingAnimation;
+    QPropertyAnimation* SmallWindowCloseSettingAnimation;
+    QPropertyAnimation* SmallWindowUnderlyingLabelCloseSettingAnimation;
+
+
 
 
     QSequentialAnimationGroup* StartWindowAnimationGroup;
@@ -113,7 +128,20 @@ private:
     QWidget* StartWindow;
 
 
+
+    QGroupBox* SmallWindowSettingTextGb;
+    QGroupBox* SmallWindowSettingBigWindowGb;
+    QGroupBox* SmallWindowSettingSmallWindowOnTopOrBottomGb;
+
+
+
+    QPushButton* SmallWindowMoreInfBtn;
+
+
+    QLabel* SmallWindowUnderlyingLabel;
     QLabel* SmallWindowLabel;
+    QLabel* SmallWindowLogoLabel;
+
     QLabel* StartWindowUnderlyingLabel;
     QLabel* StartWindowColorLabel;
     QLabel* StartWindowTextColorLabel;
