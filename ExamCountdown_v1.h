@@ -5,6 +5,9 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QGroupBox>
+#include <QLineEdit>
+#include <QCheckBox>
+#include <QRadioButton>
 #include <QDateTime>
 #include <QTimer>
 #include <QPropertyAnimation>
@@ -27,6 +30,9 @@ private:
     Ui::ExamCountdown_v1Class ui;
 
     void updateLabel();
+    void readConfig();
+    void writeConfig();
+    void startShowBigWindowAnimation();
 
     QRect desktop;
     QRect desktopAvailable;
@@ -48,7 +54,7 @@ private:
 
     bool isCountdownAudio, isHeartbeatAudio, isShowBigWindow, SmallWindowOnTopOrBottom;
 
-    int LogoPixelMultiplier;
+    float LogoPixelMultiplier;
 
 
     QString SmallWindowText;
@@ -137,6 +143,25 @@ private:
 
     QPushButton* SmallWindowMoreInfBtn;
 
+    QPushButton* SettingTextYesBtn;
+
+    QPushButton* SettingBigWindowTryBtn;
+
+    QPushButton* BilibiliBtn;
+    QPushButton* GithubBtn;
+
+    QPushButton* ExitBtn;
+
+
+    QCheckBox* SettingBigWindowIsShowCb;
+    QCheckBox* SettingBigWindowIsCountdownAudioCb;
+    QCheckBox* SettingBigWindowIsHeartbeatAudioCb;
+
+
+    QRadioButton* SettingSmallWindowOnTopRbtn;
+    QRadioButton* SettingSmallWindowOnBottomRbtn;
+
+
 
     QLabel* SmallWindowUnderlyingLabel;
     QLabel* SmallWindowLabel;
@@ -156,6 +181,18 @@ private:
     QLabel* StartWindowBlockLabel3;
     QLabel* StartWindowBlockLabel4;
 
+    QLabel* SettingTextSmallWindowTextLabel;
+    QLabel* SettingTextStartWindowTextLabel;
+    QLabel* SettingTextStartWindowEnglishLabel;
+    QLabel* SettingTextTimeLabel;
+
+
+
+
+    QLineEdit* SettingTextSmallWindowTextLedt;
+    QLineEdit* SettingTextStartWindowTextLedt;
+    QLineEdit* SettingTextStartWindowEnglishLedt;
+    QLineEdit* SettingTextTimeLedt;
 
 
 

@@ -5,6 +5,7 @@
 #include <QPropertyAnimation>
 #include <QSequentialAnimationGroup>
 #include <QDesktopWidget>
+#include <QDesktopServices>
 #include <QDateTime>
 #include <QTimer>
 #include <QThread>
@@ -13,7 +14,6 @@
 #include <QFile>
 #include <QTextStream>
 #include <QMessageBox>
-
 ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
     : QWidget(parent)
 {
@@ -84,51 +84,8 @@ ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
     isShowBigWindow = true;
     SmallWindowOnTopOrBottom = true;
 
-
-    QFile file("config.ini");
-    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        QTextStream in(&file);
-        all = in.readAll();
-        line = all.split("\n");
-        for (int i = 0; i < line.size(); i++) {
-            list = line[i].split("=");
-            if (list[0] == "SmallWindowText")
-                SmallWindowText = list[1];
-            else if (list[0] == "StartWindowText")
-                StartWindowText = list[1];
-            else if (list[0] == "StartWindowEnglishText")
-                StartWindowEnglishText = list[1];
-            else if (list[0] == "targetDateTime")
-                targetDateTime = QDateTime::fromString(list[1], "yyyy-M-d h:m:ss");
-            else if (list[0] == "SmallWindowPosition")
-                SmallWindowPosition = list[1].toInt();
-            else if (list[0] == "isCountdownAudio")
-                isCountdownAudio = list[1].toInt();
-            else if (list[0] == "isHeartbeatAudio")
-                isHeartbeatAudio = list[1].toInt();
-            else if (list[0] == "isShowBigWindow")
-                isShowBigWindow = list[1].toInt();
-            else if (list[0] == "SmallWindowOnTopOrBottom")
-                SmallWindowOnTopOrBottom = list[1].toInt();
-        }
-        file.close();
-    }
-    else {
-        QMessageBox::information(NULL, QString::fromLocal8Bit("错误"), QString::fromLocal8Bit("未找到配置文件，将使用默认配置。"));
-        if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-            QTextStream out(&file);
-            out << "SmallWindowText=" << SmallWindowText << "\n";
-            out << "StartWindowText=" << StartWindowText << "\n";
-            out << "StartWindowEnglishText=" << StartWindowEnglishText << "\n";
-            out << "targetDateTime=" << targetDateTime.toString("yyyy-M-d h:m:ss") << "\n";
-            out << "SmallWindowPosition=" << SmallWindowPosition << "\n";
-            out << "isCountdownAudio=" << isCountdownAudio << "\n";
-            out << "isHeartbeatAudio=" << isHeartbeatAudio << "\n";
-            out << "isShowBigWindow=" << isShowBigWindow << "\n";
-            out << "SmallWindowOnTopOrBottom=" << SmallWindowOnTopOrBottom << "\n";
-            file.close();
-        }
-    }
+    readConfig();
+    
     this->setWindowFlags(Qt::FramelessWindowHint | Qt::Tool | (SmallWindowOnTopOrBottom ? Qt::WindowStaysOnTopHint : Qt::WindowStaysOnBottomHint));
     
 
@@ -146,7 +103,7 @@ ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
 
 
 
-    LogoPixelMultiplier = desktop.width() * 0.25 / 2048;
+    LogoPixelMultiplier = 2682.0 / 2048.0;
 
 
 
@@ -169,7 +126,7 @@ ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
     SmallWindowLabel->show();
 
     SmallWindowLogoLabel = new QLabel(this);
-    SmallWindowLogoLabel->setGeometry(desktop.width() * 0.5625, (desktop.height() - 2682 * LogoPixelMultiplier) / 2, 2048 * LogoPixelMultiplier, 2682 * LogoPixelMultiplier);
+    SmallWindowLogoLabel->setGeometry(desktop.width() * 0.625, (desktopAvailable.height() - desktop.width() * 0.25 * LogoPixelMultiplier) / 2, desktop.width() * 0.25, desktop.width() * 0.25 * LogoPixelMultiplier);
     SmallWindowLogoLabel->setPixmap(QPixmap("img/logo.black.2048px.png"));
     SmallWindowLogoLabel->setScaledContents(true);
     SmallWindowLogoLabel->show();
@@ -258,20 +215,51 @@ ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
     border = this->height() * 0.025;
     font.setPixelSize(this->height() * 0.1);
     SmallWindowSettingTextGb = new QGroupBox(this);
-    SmallWindowSettingTextGb->setGeometry(this->width() * 0.1, this->height() * 2, desktop.width() * 0.3, desktop.height() * 0.15);
+    SmallWindowSettingTextGb->setGeometry(this->width() * 0.1, this->height() * 2, desktop.width() * 0.3, desktop.height() * 0.2);
     SmallWindowSettingTextGb->setStyleSheet("background-color: rgba(235, 235, 235, 0.5); border-radius: " + QString::number(borderRadius) + "px; border: " + QString::number(border) + "px solid rgb(235, 235, 235); ");
     SmallWindowSettingTextGb->setTitle(QString::fromLocal8Bit("文本和时间"));
     SmallWindowSettingTextGb->show();
     SmallWindowSettingBigWindowGb = new QGroupBox(this);
-    SmallWindowSettingBigWindowGb->setGeometry(this->width() * 0.1, this->height() * 5.5, desktop.width() * 0.3, desktop.height() * 0.1);
+    SmallWindowSettingBigWindowGb->setGeometry(this->width() * 0.1, this->height() * 6.5, desktop.width() * 0.3, desktop.height() * 0.1);
     SmallWindowSettingBigWindowGb->setStyleSheet("background-color: rgba(235, 235, 235, 0.5); border-radius: " + QString::number(borderRadius) + "px; border: " + QString::number(border) + "px solid rgb(235, 235, 235); ");
     SmallWindowSettingBigWindowGb->setTitle(QString::fromLocal8Bit("全屏提醒"));
     SmallWindowSettingBigWindowGb->show();
     SmallWindowSettingSmallWindowOnTopOrBottomGb = new QGroupBox(this);
-    SmallWindowSettingSmallWindowOnTopOrBottomGb->setGeometry(this->width() * 0.1, this->height() * 8, desktop.width() * 0.3, desktop.height() * 0.15);
+    SmallWindowSettingSmallWindowOnTopOrBottomGb->setGeometry(this->width() * 0.1, this->height() * 9, desktop.width() * 0.3, desktop.height() * 0.075);
     SmallWindowSettingSmallWindowOnTopOrBottomGb->setStyleSheet("background-color: rgba(235, 235, 235, 0.5); border-radius: " + QString::number(borderRadius) + "px; border: " + QString::number(border) + "px solid rgb(235, 235, 235); ");
     SmallWindowSettingSmallWindowOnTopOrBottomGb->setTitle(QString::fromLocal8Bit("小窗口层级"));
     SmallWindowSettingSmallWindowOnTopOrBottomGb->show();
+
+
+
+    // Labels in GroupBoxes
+    SettingTextSmallWindowTextLabel = new QLabel(SmallWindowSettingTextGb);
+    SettingTextSmallWindowTextLabel->setGeometry(0, SmallWindowSettingTextGb->height() * 0.1, SmallWindowSettingTextGb->width(), SmallWindowSettingTextGb->height() * 0.175);
+    SettingTextSmallWindowTextLabel->setText(QString::fromLocal8Bit("小窗口文本:"));
+    SettingTextSmallWindowTextLabel->setStyleSheet("background-color: rgba(235, 235, 235, 0.5); border-radius: 0; border: " + QString::number(border) + "px solid rgb(235, 235, 235);");
+    font.setPixelSize(SettingTextSmallWindowTextLabel->height() * 0.6);
+    SettingTextSmallWindowTextLabel->setFont(font);
+    SettingTextSmallWindowTextLabel->show();
+    SettingTextStartWindowTextLabel = new QLabel(SmallWindowSettingTextGb);
+    SettingTextStartWindowTextLabel->setGeometry(0, SmallWindowSettingTextGb->height() * 0.275, SmallWindowSettingTextGb->width(), SmallWindowSettingTextGb->height() * 0.175);
+    SettingTextStartWindowTextLabel->setText(QString::fromLocal8Bit("大窗口文本:"));
+    SettingTextStartWindowTextLabel->setStyleSheet("background-color: rgba(235, 235, 235, 0.5); border-radius: 0; border: " + QString::number(border) + "px solid rgb(235, 235, 235);");
+    SettingTextStartWindowTextLabel->setFont(font);
+    SettingTextStartWindowTextLabel->show();
+    SettingTextStartWindowEnglishLabel = new QLabel(SmallWindowSettingTextGb);
+    SettingTextStartWindowEnglishLabel->setGeometry(0, SmallWindowSettingTextGb->height() * 0.45, SmallWindowSettingTextGb->width(), SmallWindowSettingTextGb->height() * 0.175);
+    SettingTextStartWindowEnglishLabel->setText(QString::fromLocal8Bit("大窗口英文:"));
+    SettingTextStartWindowEnglishLabel->setStyleSheet("background-color: rgba(235, 235, 235, 0.5); border-radius: 0; border: " + QString::number(border) + "px solid rgb(235, 235, 235);");
+    SettingTextStartWindowEnglishLabel->setFont(font);
+    SettingTextStartWindowEnglishLabel->show();
+    SettingTextTimeLabel = new QLabel(SmallWindowSettingTextGb);
+    SettingTextTimeLabel->setGeometry(0, SmallWindowSettingTextGb->height() * 0.625, SmallWindowSettingTextGb->width(), SmallWindowSettingTextGb->height() * 0.175);
+    SettingTextTimeLabel->setText(QString::fromLocal8Bit("终点时间:"));
+    SettingTextTimeLabel->setStyleSheet("background-color: rgba(235, 235, 235, 0.5); border-radius: 0; border: " + QString::number(border) + "px solid rgb(235, 235, 235);");
+    SettingTextTimeLabel->setFont(font);
+    SettingTextTimeLabel->show();
+
+
 
 
 
@@ -287,6 +275,132 @@ ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
     font.setPixelSize(this->height());
     SmallWindowMoreInfBtn->setFont(font);
     SmallWindowMoreInfBtn->show();
+
+    SettingTextYesBtn = new QPushButton(SmallWindowSettingTextGb);
+    SettingTextYesBtn->setGeometry(0, SmallWindowSettingTextGb->height() * 0.8, SmallWindowSettingTextGb->width(), SmallWindowSettingTextGb->height() * 0.2);
+    SettingTextYesBtn->setStyleSheet("QPushButton{background-color: rgba(235, 235, 235, 0.5); border-top-left-radius: 0; border-top-right-radius: 0; border: " + QString::number(border) + "px solid rgb(235, 235, 235);} QPushButton:hover{background-color: rgba(255, 255, 255, 0.6);} QPushButton:pressed{background-color: rgba(100, 100, 100, 0.3);}");
+    SettingTextYesBtn->setText(QString::fromLocal8Bit("确定"));
+    font.setPixelSize(SettingTextYesBtn->height() * 0.6);
+    SettingTextYesBtn->setFont(font);
+    SettingTextYesBtn->show();
+
+    SettingBigWindowTryBtn = new QPushButton(SmallWindowSettingBigWindowGb);
+    SettingBigWindowTryBtn->setGeometry(SmallWindowSettingBigWindowGb->width() * 0.8 , SmallWindowSettingBigWindowGb->height() * 0.2, SmallWindowSettingBigWindowGb->width() * 0.2, SmallWindowSettingBigWindowGb->height() * 0.8);
+    SettingBigWindowTryBtn->setStyleSheet("QPushButton{background-color: rgba(235, 235, 235, 0.5); border-top-right-radius: 0; border-top-left-radius: 0; border-bottom-left-radius: 0; border: " + QString::number(border) + "px solid rgb(235, 235, 235);} QPushButton:hover{background-color: rgba(255, 255, 255, 0.6);} QPushButton:pressed{background-color: rgba(100, 100, 100, 0.3);} QPushButton:disabled{background-color: rgba(155, 155, 155, 0.25); border: " + QString::number(border) + "px solid rgb(155, 155, 155);}");
+    SettingBigWindowTryBtn->setText(QString::fromLocal8Bit("立即\n播放\n动画"));
+    SettingBigWindowTryBtn->setEnabled(isShowBigWindow);
+    font.setPixelSize(SettingBigWindowTryBtn->height() * 0.2);
+    SettingBigWindowTryBtn->setFont(font);
+    SettingBigWindowTryBtn->show();
+
+    BilibiliBtn = new QPushButton(this);
+    BilibiliBtn->setGeometry(this->width() * 0.1, this->height() * 12, desktop.width() * 0.3, desktop.height() * 0.05);
+    borderRadius = BilibiliBtn->height();
+    BilibiliBtn->setStyleSheet("QPushButton{background-color: rgba(255, 102, 153, 0.5); border-top-left-radius: " + QString::number(borderRadius) + "px; border-top-right-radius: " + QString::number(borderRadius) + "px; border: " + QString::number(border) + "px solid rgb(255, 102, 153);} QPushButton:hover{background-color: rgba(255, 102, 153, 0.6);} QPushButton:pressed{background-color: rgba(255, 102, 153, 0.2);}");
+    BilibiliBtn->setText(QString::fromLocal8Bit("哔哩哔哩：@龙ger_longer"));
+    font.setPixelSize(BilibiliBtn->height() * 0.6);
+    BilibiliBtn->setFont(font);
+    BilibiliBtn->show();
+    GithubBtn = new QPushButton(this);
+    GithubBtn->setGeometry(this->width() * 0.1, this->height() * 13, desktop.width() * 0.3, desktop.height() * 0.05);
+    GithubBtn->setStyleSheet("QPushButton{background-color: rgba(135, 205, 250, 0.5); border-bottom-left-radius: 0; border-bottom-left-radius: " + QString::number(borderRadius) + "px; border-bottom-right-radius: " + QString::number(borderRadius) + "px; border: " + QString::number(border) + "px solid rgb(135, 205, 250);} QPushButton:hover{background-color: rgba(135, 205, 250, 0.6);} QPushButton:pressed{background-color: rgba(135, 205, 250, 0.2);}");
+    GithubBtn->setText(QString::fromLocal8Bit("Github开源仓库"));
+    GithubBtn->setFont(font);
+    GithubBtn->show();
+
+    ExitBtn = new QPushButton(this);
+    ExitBtn->setGeometry(this->width() * 0.1, this->height() * 15, desktop.width() * 0.3, desktop.height() * 0.05);
+    borderRadius = ExitBtn->height() / 2;
+    ExitBtn->setStyleSheet("QPushButton{background-color: rgba(235, 235, 235, 0.5); border-radius: " + QString::number(borderRadius) + "px; border: " + QString::number(border) + "px solid rgb(235, 235, 235);} QPushButton:hover{background-color: rgba(255, 255, 255, 0.6);} QPushButton:pressed{background-color: rgba(235, 235, 235, 0.3);}");
+    ExitBtn->setText(QString::fromLocal8Bit("退出"));
+    ExitBtn->setFont(font);
+    ExitBtn->show();
+
+
+
+
+
+    // LineEdits
+    borderRadius = SettingTextSmallWindowTextLabel->height() / 2;
+    SettingTextSmallWindowTextLedt = new QLineEdit(SettingTextSmallWindowTextLabel);
+    SettingTextSmallWindowTextLedt->setGeometry(SettingTextSmallWindowTextLabel->width() * 0.25, 0, SettingTextSmallWindowTextLabel->width() * 0.75, SettingTextSmallWindowTextLabel->height());
+    SettingTextSmallWindowTextLedt->setText(SmallWindowText);
+    SettingTextSmallWindowTextLedt->setPlaceholderText(QString::fromLocal8Bit("小窗口文本"));
+    SettingTextSmallWindowTextLedt->setStyleSheet("QLineEdit{background-color: rgba(235, 235, 235, 0.5); border-radius: " + QString::number(borderRadius) + "px; border-top-right-radius: 0; border-bottom-right-radius: 0; border: " + QString::number(border) + "px solid rgb(235, 235, 235); } QLineEdit:focus{background-color: rgba(135, 205, 250, 0.6); border: " + QString::number(border) + "px solid rgb(0, 190, 255); }");
+    font.setPixelSize(SettingTextSmallWindowTextLedt->height() * 0.6);
+    SettingTextSmallWindowTextLedt->setFont(font);
+    SettingTextSmallWindowTextLedt->show();
+    SettingTextStartWindowTextLedt = new QLineEdit(SettingTextStartWindowTextLabel);
+    SettingTextStartWindowTextLedt->setGeometry(SettingTextStartWindowTextLabel->width() * 0.25, 0, SettingTextStartWindowTextLabel->width() * 0.75, SettingTextStartWindowTextLabel->height());
+    SettingTextStartWindowTextLedt->setText(StartWindowText);
+    SettingTextStartWindowTextLedt->setPlaceholderText(QString::fromLocal8Bit("大窗口文本"));
+    SettingTextStartWindowTextLedt->setStyleSheet("QLineEdit{background-color: rgba(235, 235, 235, 0.5); border-radius: " + QString::number(borderRadius) + "px; border-top-right-radius: 0; border-bottom-right-radius: 0; border: " + QString::number(border) + "px solid rgb(235, 235, 235); } QLineEdit:focus{background-color: rgba(135, 205, 250, 0.6); border: " + QString::number(border) + "px solid rgb(0, 190, 255); }");
+    SettingTextStartWindowTextLedt->setFont(font);
+    SettingTextStartWindowTextLedt->show();
+    SettingTextStartWindowEnglishLedt = new QLineEdit(SettingTextStartWindowEnglishLabel);
+    SettingTextStartWindowEnglishLedt->setGeometry(SettingTextStartWindowEnglishLabel->width() * 0.25, 0, SettingTextStartWindowEnglishLabel->width() * 0.75, SettingTextStartWindowEnglishLabel->height());
+    SettingTextStartWindowEnglishLedt->setText(StartWindowEnglishText);
+    SettingTextStartWindowEnglishLedt->setPlaceholderText(QString::fromLocal8Bit("大窗口英文"));
+    SettingTextStartWindowEnglishLedt->setStyleSheet("QLineEdit{background-color: rgba(235, 235, 235, 0.5); border-radius: " + QString::number(borderRadius) + "px; border-top-right-radius: 0; border-bottom-right-radius: 0; border: " + QString::number(border) + "px solid rgb(235, 235, 235); } QLineEdit:focus{background-color: rgba(135, 205, 250, 0.6); border: " + QString::number(border) + "px solid rgb(0, 190, 255); }");
+    SettingTextStartWindowEnglishLedt->setFont(font);
+    SettingTextStartWindowEnglishLedt->show();
+    SettingTextTimeLedt = new QLineEdit(SettingTextTimeLabel);
+    SettingTextTimeLedt->setGeometry(SettingTextTimeLabel->width() * 0.25, 0, SettingTextTimeLabel->width() * 0.75, SettingTextTimeLabel->height());
+    SettingTextTimeLedt->setText(targetDateTime.toString("yyyy-MM-dd hh:mm:ss"));
+    SettingTextTimeLedt->setPlaceholderText(QString::fromLocal8Bit("终点时间"));
+    SettingTextTimeLedt->setStyleSheet("QLineEdit{background-color: rgba(235, 235, 235, 0.5); border-radius: " + QString::number(borderRadius) + "px; border-top-right-radius: 0; border-bottom-right-radius: 0; border: " + QString::number(border) + "px solid rgb(235, 235, 235); } QLineEdit:focus{background-color: rgba(135, 205, 250, 0.6); border: " + QString::number(border) + "px solid rgb(0, 190, 255); }");
+    SettingTextTimeLedt->setFont(font);
+    SettingTextTimeLedt->show();
+
+
+
+
+    // CheckBoxes
+    SettingBigWindowIsShowCb = new QCheckBox(SmallWindowSettingBigWindowGb);
+    SettingBigWindowIsShowCb->setGeometry(0, SmallWindowSettingBigWindowGb->height() * 0.2, SmallWindowSettingBigWindowGb->width() * 0.8, SmallWindowSettingBigWindowGb->height() * 0.8 / 3);
+    SettingBigWindowIsShowCb->setText(QString::fromLocal8Bit("是否显示全屏提醒"));
+    SettingBigWindowIsShowCb->setChecked(isShowBigWindow);
+    SettingBigWindowIsShowCb->setStyleSheet("background-color: rgba(235, 235, 235, 0.5); border-radius: 0; border: " + QString::number(border) + "px solid rgb(235, 235, 235);");
+    font.setPixelSize(SettingBigWindowIsShowCb->height() * 0.6);
+    SettingBigWindowIsShowCb->setFont(font);
+    SettingBigWindowIsShowCb->show();
+    SettingBigWindowIsCountdownAudioCb = new QCheckBox(SmallWindowSettingBigWindowGb);
+    SettingBigWindowIsCountdownAudioCb->setGeometry(0, SmallWindowSettingBigWindowGb->height() * 0.2 + SmallWindowSettingBigWindowGb->height() * 0.8 / 3, SmallWindowSettingBigWindowGb->width() * 0.8, SmallWindowSettingBigWindowGb->height() * 0.8 / 3);
+    SettingBigWindowIsCountdownAudioCb->setText(QString::fromLocal8Bit("剩余时间≤30天时是否播放倒计时提醒音"));
+    SettingBigWindowIsCountdownAudioCb->setChecked(isCountdownAudio);
+    SettingBigWindowIsCountdownAudioCb->setEnabled(isShowBigWindow);
+    SettingBigWindowIsCountdownAudioCb->setStyleSheet("QCheckBox{background-color: rgba(235, 235, 235, 0.5); border-radius: 0; border: " + QString::number(border) + "px solid rgb(235, 235, 235);} QCheckBox:disabled{background-color: rgba(155, 155, 155, 0.25); border: " + QString::number(border) + "px solid rgb(155, 155, 155);}");
+    SettingBigWindowIsCountdownAudioCb->setFont(font);
+    SettingBigWindowIsCountdownAudioCb->show();
+    SettingBigWindowIsHeartbeatAudioCb = new QCheckBox(SmallWindowSettingBigWindowGb);
+    SettingBigWindowIsHeartbeatAudioCb->setGeometry(0, SmallWindowSettingBigWindowGb->height() * 0.2 + 2 * SmallWindowSettingBigWindowGb->height() * 0.8 / 3, SmallWindowSettingBigWindowGb->width() * 0.8, SmallWindowSettingBigWindowGb->height() * 0.8 / 3);
+    SettingBigWindowIsHeartbeatAudioCb->setText(QString::fromLocal8Bit("剩余时间≤14天时是否播放心跳提醒音"));
+    SettingBigWindowIsHeartbeatAudioCb->setChecked(isHeartbeatAudio);
+    SettingBigWindowIsHeartbeatAudioCb->setEnabled(isShowBigWindow);
+    SettingBigWindowIsHeartbeatAudioCb->setStyleSheet("QCheckBox{background-color: rgba(235, 235, 235, 0.5); border-top-right-radius: 0; border-top-left-radius: 0; border-bottom-right-radius: 0; border: " + QString::number(border) + "px solid rgb(235, 235, 235);} QCheckBox:disabled{background-color: rgba(155, 155, 155, 0.25); border: " + QString::number(border) + "px solid rgb(155, 155, 155);}");
+    SettingBigWindowIsHeartbeatAudioCb->setFont(font);
+    SettingBigWindowIsHeartbeatAudioCb->show();
+
+
+
+
+
+    // RadioButtons
+    SettingSmallWindowOnTopRbtn = new QRadioButton(SmallWindowSettingSmallWindowOnTopOrBottomGb);
+    SettingSmallWindowOnTopRbtn->setGeometry(0, SmallWindowSettingSmallWindowOnTopOrBottomGb->height() * 0.2, SmallWindowSettingSmallWindowOnTopOrBottomGb->width(), SmallWindowSettingSmallWindowOnTopOrBottomGb->height() * 0.4);
+    SettingSmallWindowOnTopRbtn->setText(QString::fromLocal8Bit("小窗口置顶"));
+    SettingSmallWindowOnTopRbtn->setChecked(SmallWindowOnTopOrBottom);
+    SettingSmallWindowOnTopRbtn->setStyleSheet("background-color: rgba(235, 235, 235, 0.5); border-radius: 0; border: " + QString::number(border) + "px solid rgb(235, 235, 235);");
+    font.setPixelSize(SettingSmallWindowOnTopRbtn->height() * 0.6);
+    SettingSmallWindowOnTopRbtn->setFont(font);
+    SettingSmallWindowOnTopRbtn->show();
+    SettingSmallWindowOnBottomRbtn = new QRadioButton(SmallWindowSettingSmallWindowOnTopOrBottomGb);
+    SettingSmallWindowOnBottomRbtn->setGeometry(0, SmallWindowSettingSmallWindowOnTopOrBottomGb->height() * 0.6, SmallWindowSettingSmallWindowOnTopOrBottomGb->width(), SmallWindowSettingSmallWindowOnTopOrBottomGb->height() * 0.4);
+    SettingSmallWindowOnBottomRbtn->setText(QString::fromLocal8Bit("小窗口置底"));
+    SettingSmallWindowOnBottomRbtn->setChecked(!SmallWindowOnTopOrBottom);
+    SettingSmallWindowOnBottomRbtn->setStyleSheet("background-color: rgba(235, 235, 235, 0.5); border-top-right-radius: 0; border-top-left-radius: 0; border: " + QString::number(border) + "px solid rgb(235, 235, 235);");
+    SettingSmallWindowOnBottomRbtn->setFont(font);
+    SettingSmallWindowOnBottomRbtn->show();
 
     
     
@@ -328,12 +442,12 @@ ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
     else if (SmallWindowPosition == 2)
         SmallWindowStartSettingAnimation->setStartValue(QRect(desktop.width() * 0.7, 0, desktop.width() * 0.3, desktop.height() * 0.05));
     SmallWindowStartSettingAnimation->setEndValue(QRect(0, 0, desktopAvailable.width(), desktopAvailable.height()));
-    SmallWindowStartSettingAnimation->setEasingCurve(QEasingCurve::OutCubic);
+    SmallWindowStartSettingAnimation->setEasingCurve(QEasingCurve::OutExpo);
     SmallWindowUnderlyingLabelStartSettingAnimation = new QPropertyAnimation(SmallWindowUnderlyingLabel, "geometry");
     SmallWindowUnderlyingLabelStartSettingAnimation->setDuration(1000);
     SmallWindowUnderlyingLabelStartSettingAnimation->setStartValue(QRect(0, 0, desktop.width() * 0.3, desktop.height() * 0.05));
     SmallWindowUnderlyingLabelStartSettingAnimation->setEndValue(QRect(0, 0, desktopAvailable.width(), desktopAvailable.height()));
-    SmallWindowUnderlyingLabelStartSettingAnimation->setEasingCurve(QEasingCurve::OutCubic);
+    SmallWindowUnderlyingLabelStartSettingAnimation->setEasingCurve(QEasingCurve::OutExpo);
 
     SmallWindowCloseSettingAnimation = new QPropertyAnimation(this, "geometry");
     SmallWindowCloseSettingAnimation->setDuration(1000);
@@ -344,12 +458,12 @@ ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
         SmallWindowCloseSettingAnimation->setEndValue(QRect(desktop.width() * 0.35, 0, desktop.width() * 0.3, desktop.height() * 0.05));
     else if (SmallWindowPosition == 2)
         SmallWindowCloseSettingAnimation->setEndValue(QRect(desktop.width() * 0.7, 0, desktop.width() * 0.3, desktop.height() * 0.05));
-    SmallWindowCloseSettingAnimation->setEasingCurve(QEasingCurve::OutCubic);
+    SmallWindowCloseSettingAnimation->setEasingCurve(QEasingCurve::OutExpo);
     SmallWindowUnderlyingLabelCloseSettingAnimation = new QPropertyAnimation(SmallWindowUnderlyingLabel, "geometry");
     SmallWindowUnderlyingLabelCloseSettingAnimation->setDuration(1000);
     SmallWindowUnderlyingLabelCloseSettingAnimation->setStartValue(QRect(0, 0, desktopAvailable.width(), desktopAvailable.height()));
     SmallWindowUnderlyingLabelCloseSettingAnimation->setEndValue(QRect(0, 0, desktop.width() * 0.3, desktop.height() * 0.05));
-    SmallWindowUnderlyingLabelCloseSettingAnimation->setEasingCurve(QEasingCurve::OutCubic);
+    SmallWindowUnderlyingLabelCloseSettingAnimation->setEasingCurve(QEasingCurve::OutExpo);
 
 
     StartWindowStartOpacityAnimation = new QPropertyAnimation(StartWindow, "windowOpacity");
@@ -532,7 +646,6 @@ ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
         updateLabel();
         });
     timer->start(1000);
-
     connect(StartWindowColorLabelAnimation1, &QPropertyAnimation::finished, [&] {
         StartWindowTextLabel1->show();
         StartWindowTextLabel2->show();
@@ -569,6 +682,7 @@ ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
         StartWindowBlockLabel2->hide();
         StartWindowBlockLabel3->hide();
         StartWindowBlockLabel4->hide();
+        SmallWindowUnderlyingLabel->setGeometry(0, 0, this->width(), this->height());
         });
     connect(StartWindowBlockLabel1AnimationGroup, &QSequentialAnimationGroup::finished, [&] {
         if (BlockLabelShowTimes <= 2) {
@@ -615,7 +729,54 @@ ExamCountdown_v1::ExamCountdown_v1(QWidget *parent)
         }
         });
 
+    connect(SettingTextYesBtn, &QPushButton::clicked, [&] {
+        SmallWindowText = SettingTextSmallWindowTextLedt->text();
+        StartWindowText = SettingTextStartWindowTextLedt->text();
+        StartWindowEnglishText = SettingTextStartWindowEnglishLedt->text();
+        targetDateTime = QDateTime::fromString(SettingTextTimeLedt->text(), "yyyy-M-d h:m:ss");
+        writeConfig();
+        });
+    connect(SettingBigWindowIsShowCb, &QCheckBox::stateChanged, [&] {
+        isShowBigWindow = SettingBigWindowIsShowCb->isChecked();
+        SettingBigWindowIsCountdownAudioCb->setEnabled(isShowBigWindow);
+        SettingBigWindowIsHeartbeatAudioCb->setEnabled(isShowBigWindow);
+        SettingBigWindowTryBtn->setEnabled(isShowBigWindow);
+        writeConfig();
+        });
+    connect(SettingBigWindowIsCountdownAudioCb, &QCheckBox::stateChanged, [&] {
+        isCountdownAudio = SettingBigWindowIsCountdownAudioCb->isChecked();
+        writeConfig();
+        });
+    connect(SettingBigWindowIsHeartbeatAudioCb, &QCheckBox::stateChanged, [&] {
+        isHeartbeatAudio = SettingBigWindowIsHeartbeatAudioCb->isChecked();
+        writeConfig();
+        });
+    connect(SettingBigWindowTryBtn, &QPushButton::clicked, [&] {
+        startShowBigWindowAnimation();
+        });
+    connect(SettingSmallWindowOnTopRbtn, &QRadioButton::clicked, [&] {
+        SmallWindowOnTopOrBottom = true;
+        this->setWindowFlags(Qt::FramelessWindowHint | Qt::Tool | Qt::WindowStaysOnTopHint);
+        this->show();
+        writeConfig();
+        });
+    connect(SettingSmallWindowOnBottomRbtn, &QRadioButton::clicked, [&] {
+        SmallWindowOnTopOrBottom = false;
+        this->setWindowFlags(Qt::FramelessWindowHint | Qt::Tool | Qt::WindowStaysOnBottomHint);
+        this->show();
+        writeConfig();
+        });
 
+    connect(BilibiliBtn, &QPushButton::clicked, [&] {
+        QDesktopServices::openUrl(QUrl("https://space.bilibili.com/3493110082439389"));
+        });
+    connect(GithubBtn, &QPushButton::clicked, [&] {
+        QDesktopServices::openUrl(QUrl("https://github.com/longlonger2022/Universal-Timer"));
+        });
+
+    connect(ExitBtn, &QPushButton::clicked, [&] {
+        if (QMessageBox::question(this, QString::fromLocal8Bit("退出"), QString::fromLocal8Bit("确定要退出吗？"), QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes) qApp->quit();
+        });
 }
 
 ExamCountdown_v1::~ExamCountdown_v1()
@@ -634,11 +795,80 @@ void ExamCountdown_v1::updateLabel() {
     StartWindowNumberLabel->setText(QString::number(timeDifference / 86400 + 1));
     StartWindowTextLabelEnglish->setText(StartWindowEnglishText + QString::number(timeDifference / 86400 + 1) + " DAYS");
     if (((currentDateTime.toString("h") == "8" && currentDateTime.toString("m") == "13" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "9" && currentDateTime.toString("m") == "3" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "9" && currentDateTime.toString("m") == "53" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "10" && currentDateTime.toString("m") == "43" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "11" && currentDateTime.toString("m") == "38" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "14" && currentDateTime.toString("m") == "20" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "15" && currentDateTime.toString("m") == "23" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "16" && currentDateTime.toString("m") == "13" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "17" && currentDateTime.toString("m") == "23" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "18" && currentDateTime.toString("m") == "6" && currentDateTime.toString("s") == "0")) && isShowBigWindow) {
-        StartWindow->show();
-        SmallWindowCloseOpacityAnimation->start();
-        StartWindowAnimationGroup->start();
+        startShowBigWindowAnimation();
     }
 
+}
+
+void ExamCountdown_v1::readConfig() {
+    QFile file("config.ini");
+    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QTextStream in(&file);
+        all = in.readAll();
+        line = all.split("\n");
+        for (int i = 0; i < line.size(); i++) {
+            list = line[i].split("=");
+            if (list[0] == "SmallWindowText")
+                SmallWindowText = list[1];
+            else if (list[0] == "StartWindowText")
+                StartWindowText = list[1];
+            else if (list[0] == "StartWindowEnglishText")
+                StartWindowEnglishText = list[1];
+            else if (list[0] == "targetDateTime")
+                targetDateTime = QDateTime::fromString(list[1], "yyyy-M-d h:m:ss");
+            else if (list[0] == "SmallWindowPosition")
+                SmallWindowPosition = list[1].toInt();
+            else if (list[0] == "isCountdownAudio")
+                isCountdownAudio = list[1].toInt();
+            else if (list[0] == "isHeartbeatAudio")
+                isHeartbeatAudio = list[1].toInt();
+            else if (list[0] == "isShowBigWindow")
+                isShowBigWindow = list[1].toInt();
+            else if (list[0] == "SmallWindowOnTopOrBottom")
+                SmallWindowOnTopOrBottom = list[1].toInt();
+        }
+        file.close();
+    }
+    else {
+        QMessageBox::critical(NULL, QString::fromLocal8Bit("错误"), QString::fromLocal8Bit("未找到配置文件，将使用默认配置。"));
+        if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+            QTextStream out(&file);
+            out << "SmallWindowText=" << SmallWindowText << "\n";
+            out << "StartWindowText=" << StartWindowText << "\n";
+            out << "StartWindowEnglishText=" << StartWindowEnglishText << "\n";
+            out << "targetDateTime=" << targetDateTime.toString("yyyy-M-d h:m:ss") << "\n";
+            out << "SmallWindowPosition=" << SmallWindowPosition << "\n";
+            out << "isCountdownAudio=" << isCountdownAudio << "\n";
+            out << "isHeartbeatAudio=" << isHeartbeatAudio << "\n";
+            out << "isShowBigWindow=" << isShowBigWindow << "\n";
+            out << "SmallWindowOnTopOrBottom=" << SmallWindowOnTopOrBottom << "\n";
+            file.close();
+        }
+    }
+}
+void ExamCountdown_v1::writeConfig() {
+    QFile file("config.ini");
+    if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QTextStream out(&file);
+        out << "SmallWindowText=" << SmallWindowText << "\n";
+        out << "StartWindowText=" << StartWindowText << "\n";
+        out << "StartWindowEnglishText=" << StartWindowEnglishText << "\n";
+        out << "targetDateTime=" << targetDateTime.toString("yyyy-M-d h:m:ss") << "\n";
+        out << "SmallWindowPosition=" << SmallWindowPosition << "\n";
+        out << "isCountdownAudio=" << isCountdownAudio << "\n";
+        out << "isHeartbeatAudio=" << isHeartbeatAudio << "\n";
+        out << "isShowBigWindow=" << isShowBigWindow << "\n";
+        out << "SmallWindowOnTopOrBottom=" << SmallWindowOnTopOrBottom << "\n";
+        file.close();
+    }
+}
+
+void ExamCountdown_v1::startShowBigWindowAnimation() {
+    StartWindow->show();
+    StartWindowAnimationGroup->start();
+    if (isSetting) SmallWindowCloseSettingAnimation->start();
+    SmallWindowCloseOpacityAnimation->start();
+    isSetting = false;
 }
 
 
@@ -685,19 +915,7 @@ void ExamCountdown_v1::mouseReleaseEvent(QMouseEvent* event) {
             SmallWindowStartAnimation->setStartValue(QPoint(desktop.width() * 0.35, -desktop.height() * 0.05));
             SmallWindowStartAnimation->setEndValue(QPoint(desktop.width() * 0.35, 0));
         }
-        QFile file("config.ini");
-        if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-            QTextStream out(&file);
-            out << "SmallWindowText=" << SmallWindowText << "\n";
-            out << "StartWindowText=" << StartWindowText << "\n";
-            out << "StartWindowEnglishText=" << StartWindowEnglishText << "\n";
-            out << "targetDateTime=" << targetDateTime.toString("yyyy-M-d h:m:ss") << "\n";
-            out << "SmallWindowPosition=" << SmallWindowPosition << "\n";
-            out << "isCountdownAudio=" << isCountdownAudio << "\n";
-            out << "isHeartbeatAudio=" << isHeartbeatAudio << "\n";
-            out << "isShowBigWindow=" << isShowBigWindow << "\n";
-            out << "SmallWindowOnTopOrBottom=" << SmallWindowOnTopOrBottom << "\n";
-            file.close();
-        }
+        writeConfig();
     }
 }
+
