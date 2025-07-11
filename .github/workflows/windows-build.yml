@@ -16,13 +16,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up Qt
-        uses: qt-actions/setup-qt@v2
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
         with:
-          version: '5.15.2'
+          version: ${{ env.QT_VERSION }}
           host: windows
-          arch: 'x64'
-          tool: 'msvc2019_64'
+          target: desktop
 
       - name: Configure with qmake
         run: |
