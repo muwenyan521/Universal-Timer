@@ -22,22 +22,17 @@ jobs:
           version: 5.15.2
           arch: win64_mingw81
 
-      - name: Configure with qmake
-        run: |
-          cd ${{ github.workspace }}
-          qmake -r ExamCountdown_v1.pro
+      - name: Generate Makefile
+        run: qmake -makefile ExamCountdown_v1.pro
 
-      - name: Build with nmake
-        run: |
-          cd ${{ github.workspace }}
-          nmake /f Makefile.Release
+      - name: Build project (Release)
+        run: mingw32-make -f Makefile.Release
 
       - name: Package executable and dependencies
         run: |
           cd ${{ github.workspace }}
           mkdir build_output
           copy Release\ExamCountdown_v1.exe build_output\
-          :: copy any required Qt DLLs (adjust paths as needed)
           copy "%QT_DIR%\bin\Qt5Core.dll" build_output\
           copy "%QT_DIR%\bin\Qt5Widgets.dll" build_output\
           copy "%QT_DIR%\bin\Qt5Gui.dll" build_output\
