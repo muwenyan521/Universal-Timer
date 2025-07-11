@@ -19,9 +19,8 @@ jobs:
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
         with:
-          version: ${{ env.QT_VERSION }}
-          host: windows
-          target: desktop
+          version: 5.15.2
+          arch: win64_mingw81
 
       - name: Configure with qmake
         run: |
