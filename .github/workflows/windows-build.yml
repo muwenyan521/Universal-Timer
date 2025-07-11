@@ -1,0 +1,52 @@
+name: Windows CI Build
+
+on:
+  push:
+    branches:
+      - '**'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: cmd
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Qt
+        uses: qt-actions/setup-qt@v2
+        with:
+          version: '5.15.2'
+          host: windows
+          arch: 'x64'
+          tool: 'msvc2019_64'
+
+      - name: Configure with qmake
+        run: |
+          cd ${{ github.workspace }}
+          qmake -r ExamCountdown_v1.pro
+
+      - name: Build with nmake
+        run: |
+          cd ${{ github.workspace }}
+          nmake /f Makefile.Release
+
+      - name: Package executable and dependencies
+        run: |
+          cd ${{ github.workspace }}
+          mkdir build_output
+          copy Release\ExamCountdown_v1.exe build_output\
+          :: copy any required Qt DLLs (adjust paths as needed)
+          copy "%QT_DIR%\bin\Qt5Core.dll" build_output\
+          copy "%QT_DIR%\bin\Qt5Widgets.dll" build_output\
+          copy "%QT_DIR%\bin\Qt5Gui.dll" build_output\
+          "C:\Program Files\7-Zip\7z.exe" a build_output.zip build_output\*
+
+      - name: Upload Windows build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Windows-Build
+          path: build_output.zip
