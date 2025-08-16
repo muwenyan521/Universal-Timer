@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <QtWidgets/QWidget>
 #include "ui_ExamCountdown_v1.h"
@@ -16,6 +16,7 @@
 #include <QGraphicsEffect>
 #include <QSoundEffect>
 #include <QMouseEvent>
+#include <QResizeEvent>
 #include <QRect>
 
 class ExamCountdown_v1 : public QWidget
@@ -60,6 +61,9 @@ private:
     QString SmallWindowText;
     QString StartWindowText;
     QString StartWindowEnglishText;
+
+    QString RightConfigVersion;
+    QString ConfigVersion;
 
     QString all;
     QStringList line;
@@ -203,4 +207,5 @@ protected:
     void mousePressEvent(QMouseEvent* event);
     void mouseMoveEvent(QMouseEvent* event);
     void mouseReleaseEvent(QMouseEvent* event);
+    void resizeEvent(QResizeEvent* event);
 };
