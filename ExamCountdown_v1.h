@@ -8,6 +8,8 @@
 #include <QLineEdit>
 #include <QCheckBox>
 #include <QRadioButton>
+#include <QComboBox>
+#include <QMessageBox>
 #include <QDateTime>
 #include <QTimer>
 #include <QPropertyAnimation>
@@ -33,6 +35,10 @@ private:
     void updateLabel();
     void readConfig();
     void writeConfig();
+    void scanLanguage();
+    void selectLanguage();
+    void changeLanguage();
+    void readLanguage();
     void startShowBigWindowAnimation();
 
     QRect desktop;
@@ -58,21 +64,32 @@ private:
     float LogoPixelMultiplier;
 
 
+    // 文本设置
     QString SmallWindowText;
     QString StartWindowText;
     QString StartWindowEnglishText;
 
+    // 配置文件版本
     QString RightConfigVersion;
     QString ConfigVersion;
 
+    // 语言设置
+    QString Language;
+    // 语言版本
+    QString RightLanguageVersion;
+    QString LanguageVersion;
+
+    // 配置读取变量
     QString all;
     QStringList line;
     QStringList list;
 
+    // 声音
     QSoundEffect* CountdownSoundEffect;
     QSoundEffect* HeartbeatSoundEffect;
 
 
+    // 透明度变量
     QGraphicsOpacityEffect* NumberLabelOpacityEffect;
     QGraphicsOpacityEffect* StartWindowBlockLabel1OpacityEffect;
     QGraphicsOpacityEffect* StartWindowBlockLabel2OpacityEffect;
@@ -80,6 +97,7 @@ private:
     QGraphicsOpacityEffect* StartWindowBlockLabel4OpacityEffect;
 
 
+    // 一堆动画
     QPropertyAnimation* SmallWindowStartAnimation;
     QPropertyAnimation* SmallWindowStartOpacityAnimation;
     QPropertyAnimation* SmallWindowCloseOpacityAnimation;
@@ -134,17 +152,23 @@ private:
 
     QParallelAnimationGroup* SmallWindowStartAnimationGroup;
 
-
+    
+    // Widgets
     QWidget* StartWindow;
 
 
+    // MessageBoxes
+    QMessageBox* AskExitMsgBox;
 
+    
+    // GroupBoxes
     QGroupBox* SmallWindowSettingTextGb;
     QGroupBox* SmallWindowSettingBigWindowGb;
     QGroupBox* SmallWindowSettingSmallWindowOnTopOrBottomGb;
 
 
 
+    // PushButtons
     QPushButton* SmallWindowMoreInfBtn;
 
     QPushButton* SettingTextYesBtn;
@@ -157,16 +181,22 @@ private:
     QPushButton* ExitBtn;
 
 
+    // CheckBoxes
     QCheckBox* SettingBigWindowIsShowCb;
     QCheckBox* SettingBigWindowIsCountdownAudioCb;
     QCheckBox* SettingBigWindowIsHeartbeatAudioCb;
 
 
+    // RadioButtons
     QRadioButton* SettingSmallWindowOnTopRbtn;
     QRadioButton* SettingSmallWindowOnBottomRbtn;
 
 
+    // Comboboxes
+    QComboBox* SettingLanguageCmb;
 
+
+    // Labels
     QLabel* SmallWindowUnderlyingLabel;
     QLabel* SmallWindowLabel;
     QLabel* SmallWindowLogoLabel;
@@ -192,7 +222,7 @@ private:
 
 
 
-
+    // LineEdits
     QLineEdit* SettingTextSmallWindowTextLedt;
     QLineEdit* SettingTextStartWindowTextLedt;
     QLineEdit* SettingTextStartWindowEnglishLedt;
