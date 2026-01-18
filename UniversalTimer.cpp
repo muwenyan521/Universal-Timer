@@ -79,6 +79,8 @@ UniversalTimer::UniversalTimer(QWidget* parent)
     timeDifferenceString = QString::number(timeDifference / 86400) + QString::fromUtf8(" 天 ") + QString::number((timeDifference % 86400) / 3600) + QString::fromUtf8(" 时 ") + QString::number((timeDifference % 3600) / 60) + QString::fromUtf8(" 分 ") + QString::number(timeDifference % 60) + QString::fromUtf8(" 秒");
 
 
+    // TimeList初始化
+    TimeList = { QTime::fromString("8:13:00", "h:mm:ss"), QTime::fromString("9:03:00", "h:mm:ss"), QTime::fromString("9:53:00", "h:mm:ss"), QTime::fromString("10:43:00", "h:mm:ss"), QTime::fromString("11:38:00", "h:mm:ss"), QTime::fromString("14:20:00", "h:mm:ss"), QTime::fromString("15:23:00", "h:mm:ss"), QTime::fromString("16:13:00", "h:mm:ss"), QTime::fromString("17:03:00", "h:mm:ss"), QTime::fromString("18:06:00", "h:mm:ss") };
 
 
     CountdownSoundEffect = new QSoundEffect(this);
@@ -162,7 +164,7 @@ UniversalTimer::UniversalTimer(QWidget* parent)
     StartWindowUnderlyingLabel = new QLabel(StartWindow);
     StartWindowUnderlyingLabel->setGeometry(0, 0, desktop.width(), desktop.height());
     StartWindowUnderlyingLabel->setStyleSheet("background-color: rgba(0, 0, 0, 0.75);");
-    StartWindowUnderlyingLabel->show();
+    StartWindowUnderlyingLabel->hide();
 
     StartWindowTextColorLabel = new QLabel(StartWindow);
     StartWindowTextColorLabel->setGeometry(desktop.width() * 0.125 + desktop.height() * 0.2, desktop.height() * 0.45, desktop.width() * 0.01, desktop.height() * 0.25);
@@ -548,20 +550,15 @@ UniversalTimer::UniversalTimer(QWidget* parent)
     SmallWindowCloseSettingAnimation->setEasingCurve(QEasingCurve::OutExpo);
 
 
-    StartWindowStartOpacityAnimation = new QPropertyAnimation(StartWindow, "windowOpacity");
-    StartWindowStartOpacityAnimation->setDuration(1000);
-    StartWindowStartOpacityAnimation->setStartValue(0);
-    StartWindowStartOpacityAnimation->setEndValue(1);
-    StartWindowStartOpacityAnimation->setEasingCurve(QEasingCurve::InCubic);
+    
     StartWindowColorLabelAnimation1 = new QPropertyAnimation(StartWindowColorLabel, "geometry");
-    StartWindowColorLabelAnimation1->setDuration(1000);
-    StartWindowColorLabelAnimation1->setStartValue(QRect(0, 0, 0, desktop.height()));
+    StartWindowColorLabelAnimation1->setDuration(250);
+    StartWindowColorLabelAnimation1->setStartValue(QRect(-desktop.width(), 0, desktop.width(), desktop.height()));
     StartWindowColorLabelAnimation1->setEndValue(QRect(0, 0, desktop.width(), desktop.height()));
-    StartWindowColorLabelAnimation1->setEasingCurve(QEasingCurve::InCubic);
     StartWindowColorLabelAnimation2 = new QPropertyAnimation(StartWindowColorLabel, "geometry");
     StartWindowColorLabelAnimation2->setDuration(1000);
     StartWindowColorLabelAnimation2->setStartValue(QRect(0, 0, desktop.width(), desktop.height()));
-    StartWindowColorLabelAnimation2->setEndValue(QRect(desktop.width(), 0, 0, desktop.height()));
+    StartWindowColorLabelAnimation2->setEndValue(QRect(desktop.width(), 0, desktop.width(), desktop.height()));
     StartWindowColorLabelAnimation2->setEasingCurve(QEasingCurve::OutCubic);
     StartWindowTextColorLabelAnimation = new QPropertyAnimation(StartWindowTextColorLabel, "geometry");
     StartWindowTextColorLabelAnimation->setDuration(1500);
@@ -668,7 +665,6 @@ UniversalTimer::UniversalTimer(QWidget* parent)
 
 
     StartWindowAnimationGroup = new QSequentialAnimationGroup;
-    StartWindowAnimationGroup->addAnimation(StartWindowStartOpacityAnimation);
     StartWindowAnimationGroup->addAnimation(StartWindowColorLabelAnimation1);
     StartWindowAnimationGroup->addAnimation(StartWindowColorLabelAnimation2);
     StartWindowAnimationGroup->addAnimation(StartWindowTextColorLabelAnimation);
@@ -727,18 +723,20 @@ UniversalTimer::UniversalTimer(QWidget* parent)
 
 
     // connects
-    // 每隔一秒更新
+    // 每隔1秒更新
     QTimer* timer = new QTimer(this);
     connect(timer, &QTimer::timeout, [=] {
         updateLabel();
         });
     timer->start(1000);
     connect(StartWindowColorLabelAnimation1, &QPropertyAnimation::finished, [&] {
+        StartWindowUnderlyingLabel->show();
         StartWindowTextLabel1->show();
         StartWindowTextLabel2->show();
         StartWindowNumberLabel->show();
         StartWindowTextLabel3->show();
         StartWindowTextLabelEnglish->show();
+        updateLabel();
         });
     connect(StartWindowColorLabelAnimation2, &QPropertyAnimation::finished, [&] {
         StartWindowTextColorLabel->show();
@@ -905,9 +903,15 @@ void UniversalTimer::updateLabel() {
     StartWindowTextLabel2->move(StartWindowTextLabel1->x() + StartWindowTextLabel1->width() - StartWindowTextLabel1->height() * 2, StartWindowTextLabel1->y() + StartWindowTextLabel1->height());
     StartWindowNumberLabel->move(StartWindowTextLabel2->x() + StartWindowTextLabel2->width(), StartWindowTextLabel2->y() + StartWindowTextLabel2->height() * 1.5 - StartWindowNumberLabel->height());
     StartWindowTextLabel3->move(StartWindowNumberLabel->x() + StartWindowNumberLabel->width(), StartWindowTextLabel2->y());
-    StartWindowTextLabelEnglish->move(StartWindowTextLabel2->x(), StartWindowTextLabel2->y() + StartWindowTextLabel2->height());
+    StartWindowTextLabelEnglish->move(StartWindowTextLabel2->x() + desktop.height() * 0.025, StartWindowTextLabel2->y() + StartWindowTextLabel2->height());
+    StartWindowTextColorLabelAnimation->setStartValue(QRect(StartWindowTextLabel2->x() - desktop.width() * 0.025, StartWindowTextLabel2->y() + (StartWindowTextLabel2->height() + StartWindowTextLabelEnglish->height()) / 2, desktop.width() * 0.01, 0));
+    StartWindowTextColorLabelAnimation->setEndValue(QRect(StartWindowTextLabel2->x() - desktop.width() * 0.025, StartWindowTextLabel2->y(), desktop.width() * 0.01, StartWindowTextLabel2->height() + StartWindowTextLabelEnglish->height()));
 
-    if (((currentDateTime.toString("h") == "8" && currentDateTime.toString("m") == "13" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "9" && currentDateTime.toString("m") == "3" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "9" && currentDateTime.toString("m") == "53" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "10" && currentDateTime.toString("m") == "43" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "11" && currentDateTime.toString("m") == "38" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "14" && currentDateTime.toString("m") == "20" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "15" && currentDateTime.toString("m") == "23" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "16" && currentDateTime.toString("m") == "13" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "17" && currentDateTime.toString("m") == "23" && currentDateTime.toString("s") == "0") || (currentDateTime.toString("h") == "18" && currentDateTime.toString("m") == "6" && currentDateTime.toString("s") == "0")) && isShowBigWindow) {
+
+    // 判断是否到达TimeList中的任意时间点
+    QTime currentTime = QTime::fromString(currentDateTime.toString("h:mm:ss"), "h:mm:ss");
+    if (TimeList.contains(currentTime)) {
+        //SmallWindowLabel->setText(currentDateTime.toString("h:mm:ss") + TimeList[i]);
         startShowBigWindowAnimation();
     }
 }
@@ -944,11 +948,14 @@ void UniversalTimer::readConfig() {
                 SmallWindowOnTopOrBottom = list[1].toInt();
         }
         file.close();
+        readTimeConfig();
     }
+    // 若无配置文件，则为第一次使用，显示欢迎界面
     else {
-        QMessageBox::critical(NULL, QString::fromUtf8("错误 Error"), QString::fromUtf8("未找到配置文件，将使用默认配置。\nNo config file is found, the default config will be used."));
+        QMessageBox::information(NULL, QString::fromUtf8("Welcome"), QString::fromUtf8("欢迎使用万能倒计时！\n\n您可以通过本软件设置倒计时，然后清晰明了地查看距离倒计时还剩多少时间！\n\n开始后，点击倒计时条的三条杠，设置完毕并开始使用吧！"));
         ConfigVersion = RightConfigVersion;
         writeConfig();
+        writeTimeConfig();
     }
 }
 void UniversalTimer::writeConfig() {
@@ -966,6 +973,29 @@ void UniversalTimer::writeConfig() {
         out << "isHeartbeatAudio=" << isHeartbeatAudio << "\n";
         out << "isShowBigWindow=" << isShowBigWindow << "\n";
         out << "SmallWindowOnTopOrBottom=" << SmallWindowOnTopOrBottom << "\n";
+        file.close();
+    }
+}
+
+void UniversalTimer::readTimeConfig() {
+    QFile file("timeconfig.ini");
+    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QTextStream in(&file);
+        TimeList.clear();
+        while (!in.atEnd()) {
+            TimeList.append(QTime::fromString(in.readLine(),"h:mm:ss"));
+        }
+        file.close();
+    }
+}
+
+void UniversalTimer::writeTimeConfig() {
+    QFile file("timeconfig.ini");
+    if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QTextStream out(&file);
+        for (int i = 0; i < TimeList.size(); i++) {
+            out << TimeList[i].toString("h:mm:ss") << "\n";
+        }
         file.close();
     }
 }
@@ -1726,6 +1756,7 @@ void UniversalTimer::readLanguage() {
 
 void UniversalTimer::startShowBigWindowAnimation() {
     StartWindow->show();
+    StartWindowColorLabel->show();
     StartWindowAnimationGroup->start();
     if (isSetting) SmallWindowCloseSettingAnimation->start();
     SmallWindowCloseOpacityAnimation->start();

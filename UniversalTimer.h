@@ -35,6 +35,8 @@ private:
     void updateLabel();
     void readConfig();
     void writeConfig();
+    void readTimeConfig();
+    void writeTimeConfig();
     void scanLanguage();
     void selectLanguage();
     void changeLanguage();
@@ -49,6 +51,8 @@ private:
     QDateTime targetDateTime;
     int timeDifference;
     QString timeDifferenceString;
+
+    QList<QTime> TimeList;
 
     int BlockLabelShowTimes;
 
@@ -101,7 +105,6 @@ private:
     QPropertyAnimation* SmallWindowStartAnimation;
     QPropertyAnimation* SmallWindowStartOpacityAnimation;
     QPropertyAnimation* SmallWindowCloseOpacityAnimation;
-    QPropertyAnimation* StartWindowStartOpacityAnimation;
     QPropertyAnimation* StartWindowColorLabelAnimation1;
     QPropertyAnimation* StartWindowColorLabelAnimation2;
     QPropertyAnimation* StartWindowTextColorLabelAnimation;
