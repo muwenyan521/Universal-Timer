@@ -708,8 +708,7 @@ UniversalTimer::UniversalTimer(QWidget* parent)
 
 
     if (isShowBigWindow) {
-        StartWindow->show();
-        StartWindowAnimationGroup->start();
+        startShowBigWindowAnimation();
     }
     else SmallWindowStartAnimationGroup->start();
 
@@ -753,6 +752,7 @@ UniversalTimer::UniversalTimer(QWidget* parent)
         }
         });
     connect(StartWindowAnimationGroup, &QSequentialAnimationGroup::finished, [&] {
+        StartWindow->setWindowOpacity(1);
         StartWindow->hide();
         StartWindowTextColorLabel->hide();
         StartWindowTextLabel1->hide();
