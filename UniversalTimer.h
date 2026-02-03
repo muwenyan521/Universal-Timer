@@ -19,6 +19,9 @@
 #include <QMouseEvent>
 #include <QResizeEvent>
 #include <QRect>
+#include <QSettings>
+#include <QDir> 
+#include <QDebug>
 
 class UniversalTimer : public QWidget
 {
@@ -29,14 +32,6 @@ public:
 	~UniversalTimer();
 
 private:
-	QPropertyAnimation* SmallWindowStartSettingAnimation;
-	QPropertyAnimation* SmallWindowCloseSettingAnimation;
-
-	QGraphicsOpacityEffect* NumberLabelOpacityEffect;
-	QGraphicsOpacityEffect* StartWindowBlockLabel1OpacityEffect;
-	QGraphicsOpacityEffect* StartWindowBlockLabel2OpacityEffect;
-	QGraphicsOpacityEffect* StartWindowBlockLabel3OpacityEffect;
-	QGraphicsOpacityEffect* StartWindowBlockLabel4OpacityEffect;
 
 	void updateLabel();
 	void readConfig();
@@ -46,7 +41,8 @@ private:
 	void scanLanguage();
 	void selectLanguage();
 	void changeLanguage();
-	void readLanguage();
+	void loadLanguage(const QString& langCode);
+	void applyLanguage();
 	void startShowBigWindowAnimation();
 
 	QRect desktop;
@@ -84,10 +80,8 @@ private:
 	QString ConfigVersion;
 
 	// 语言设置
-	QString Language;
-	// 语言版本
-	QString RightLanguageVersion;
-	QString LanguageVersion;
+	QSettings* langSettings;
+	QString currentLangCode;
 
 	// 配置读取变量
 	QString all;
@@ -119,7 +113,7 @@ private:
 	QPropertyAnimation* StartWindowNumberLabelOpacityAnimation3;
 	QPropertyAnimation* StartWindowNumberLabelOpacityAnimation4;
 	QPropertyAnimation* StartWindowNumberLabelOpacityAnimation5;
-	QPropertyAnimation* StartWindowCloseOpacityAnimation;
+	QPropertyAnimation* StartWindowBigWindowCloseOpacityAnimation;  // 修改：避免重名
 
 	QPropertyAnimation* StartWindowBlockLabel1OpacityAnimation1;
 	QPropertyAnimation* StartWindowBlockLabel1OpacityAnimation2;
@@ -146,8 +140,6 @@ private:
 	QPropertyAnimation* SmallWindowUnderlyingLabelCloseSettingAnimation;
 
 
-
-
 	QSequentialAnimationGroup* StartWindowAnimationGroup;
 	QSequentialAnimationGroup* StartWindowNumberLabelAnimationGroup;
 
@@ -155,9 +147,6 @@ private:
 	QSequentialAnimationGroup* StartWindowBlockLabel2AnimationGroup;
 	QSequentialAnimationGroup* StartWindowBlockLabel3AnimationGroup;
 	QSequentialAnimationGroup* StartWindowBlockLabel4AnimationGroup;
-
-
-
 
 	QParallelAnimationGroup* SmallWindowStartAnimationGroup;
 
@@ -229,19 +218,15 @@ private:
 	QLabel* SettingTextStartWindowEnglishLabel;
 	QLabel* SettingTextTimeLabel;
 
-
-
 	// LineEdits
 	QLineEdit* SettingTextSmallWindowTextLedt;
 	QLineEdit* SettingTextStartWindowTextLedt;
 	QLineEdit* SettingTextStartWindowEnglishLedt;
 	QLineEdit* SettingTextTimeLedt;
 
-
-
-
 	float startX;
 	float startY;
+
 protected:
 	void mousePressEvent(QMouseEvent* event);
 	void mouseMoveEvent(QMouseEvent* event);

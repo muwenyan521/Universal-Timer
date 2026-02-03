@@ -15,11 +15,10 @@
 #include <QTimer>
 #include <QThread>
 #include <QGraphicsEffect>
-#include <QtMultimedia/QSoundEffect>
+#include <QSoundEffect>
 #include <QFile>
 #include <QTextStream>
 #include <QMessageBox>
-#include <QScreen>
 #include <QDebug>
 #include <QApplication>
 
@@ -27,6 +26,8 @@
 
 UniversalTimer::UniversalTimer(QWidget* parent)
 	: QWidget(parent)
+	, langSettings(nullptr)
+	, currentLangCode("zh_CN")
 	, CountdownSoundEffect(nullptr)
 	, HeartbeatSoundEffect(nullptr)
 	, NumberLabelOpacityEffect(nullptr)
@@ -34,6 +35,46 @@ UniversalTimer::UniversalTimer(QWidget* parent)
 	, StartWindowBlockLabel2OpacityEffect(nullptr)
 	, StartWindowBlockLabel3OpacityEffect(nullptr)
 	, StartWindowBlockLabel4OpacityEffect(nullptr)
+	, SmallWindowStartAnimation(nullptr)
+	, SmallWindowStartOpacityAnimation(nullptr)
+	, SmallWindowCloseOpacityAnimation(nullptr)
+	, StartWindowColorLabelAnimation1(nullptr)
+	, StartWindowColorLabelAnimation2(nullptr)
+	, StartWindowTextColorLabelAnimation(nullptr)
+	, StartWindowNumberLabelOpacityAnimation1(nullptr)
+	, StartWindowNumberLabelOpacityAnimation2(nullptr)
+	, StartWindowNumberLabelOpacityAnimation3(nullptr)
+	, StartWindowNumberLabelOpacityAnimation4(nullptr)
+	, StartWindowNumberLabelOpacityAnimation5(nullptr)
+	, StartWindowBigWindowCloseOpacityAnimation(nullptr)
+	, StartWindowBlockLabel1OpacityAnimation1(nullptr)
+	, StartWindowBlockLabel1OpacityAnimation2(nullptr)
+	, StartWindowBlockLabel1OpacityAnimation3(nullptr)
+	, StartWindowBlockLabel1OpacityAnimation4(nullptr)
+	, StartWindowBlockLabel2OpacityAnimation1(nullptr)
+	, StartWindowBlockLabel2OpacityAnimation2(nullptr)
+	, StartWindowBlockLabel2OpacityAnimation3(nullptr)
+	, StartWindowBlockLabel2OpacityAnimation4(nullptr)
+	, StartWindowBlockLabel3OpacityAnimation1(nullptr)
+	, StartWindowBlockLabel3OpacityAnimation2(nullptr)
+	, StartWindowBlockLabel3OpacityAnimation3(nullptr)
+	, StartWindowBlockLabel3OpacityAnimation4(nullptr)
+	, StartWindowBlockLabel4OpacityAnimation1(nullptr)
+	, StartWindowBlockLabel4OpacityAnimation2(nullptr)
+	, StartWindowBlockLabel4OpacityAnimation3(nullptr)
+	, StartWindowBlockLabel4OpacityAnimation4(nullptr)
+	, SmallWindowMoveAnimation(nullptr)
+	, SmallWindowStartSettingAnimation(nullptr)
+	, SmallWindowUnderlyingLabelStartSettingAnimation(nullptr)
+	, SmallWindowCloseSettingAnimation(nullptr)
+	, SmallWindowUnderlyingLabelCloseSettingAnimation(nullptr)
+	, StartWindowAnimationGroup(nullptr)
+	, StartWindowNumberLabelAnimationGroup(nullptr)
+	, StartWindowBlockLabel1AnimationGroup(nullptr)
+	, StartWindowBlockLabel2AnimationGroup(nullptr)
+	, StartWindowBlockLabel3AnimationGroup(nullptr)
+	, StartWindowBlockLabel4AnimationGroup(nullptr)
+	, SmallWindowStartAnimationGroup(nullptr)
 	, StartWindow(nullptr)
 	, AskExitMsgBox(nullptr)
 	, SmallWindowSettingTextGb(nullptr)
@@ -74,8 +115,10 @@ UniversalTimer::UniversalTimer(QWidget* parent)
 	, SettingTextStartWindowTextLedt(nullptr)
 	, SettingTextStartWindowEnglishLedt(nullptr)
 	, SettingTextTimeLedt(nullptr)
+	, startX(0)
+	, startY(0)
 {
-	// 窗口设置
+	// ============== 第一步：基本设置 ==============
 	desktop = QApplication::primaryScreen()->geometry();
 	desktopAvailable = QApplication::primaryScreen()->availableGeometry();
 	this->setGeometry(desktop.width() * 0.35, -desktop.height() * 0.05, desktop.width() * 0.3, desktop.height() * 0.05);
@@ -101,46 +144,45 @@ UniversalTimer::UniversalTimer(QWidget* parent)
 	// 获取系统时间
 	currentDateTime = QDateTime::currentDateTime();
 	currentDateTimeString = currentDateTime.toString("yyyy-M-d h:m:ss");
-	// 将当前时间与6月30日0:0:00进行比较
 	targetDateTime = QDateTime::fromString("2025-6-30 0:0:00", "yyyy-M-d h:m:ss");
 	timeDifference = currentDateTime.secsTo(targetDateTime);
-	// 将秒数转换为格式d天h时m分s秒
 	timeDifferenceString = QString::number(timeDifference / 86400) + QString::fromUtf8(" 天 ") + QString::number((timeDifference % 86400) / 3600) + QString::fromUtf8(" 时 ") + QString::number((timeDifference % 3600) / 60) + QString::fromUtf8(" 分 ") + QString::number(timeDifference % 60) + QString::fromUtf8(" 秒");
 
 	// TimeList初始化
 	TimeList = { QTime::fromString("8:13:00", "h:mm:ss"), QTime::fromString("9:03:00", "h:mm:ss"), QTime::fromString("9:53:00", "h:mm:ss"), QTime::fromString("10:43:00", "h:mm:ss"), QTime::fromString("11:38:00", "h:mm:ss"), QTime::fromString("14:20:00", "h:mm:ss"), QTime::fromString("15:23:00", "h:mm:ss"), QTime::fromString("16:13:00", "h:mm:ss"), QTime::fromString("17:03:00", "h:mm:ss"), QTime::fromString("18:06:00", "h:mm:ss") };
 
-	CountdownSoundEffect = new QSoundEffect(this);
-	CountdownSoundEffect->setSource(QUrl("qrc:/sounds/countdown.wav"));
-	HeartbeatSoundEffect = new QSoundEffect(this);
-	HeartbeatSoundEffect->setSource(QUrl("qrc:/sounds/heartbeat.wav"));
-
-	SmallWindowPosition = 1;
-
-	isSetting = false;
-
-	isCountdownAudio = true;
-	isHeartbeatAudio = true;
-	isShowBigWindow = true;
-	SmallWindowOnTopOrBottom = true;
-
-	Language = "zh-CN";
-	RightLanguageVersion = "1.3.0.0";
-	LanguageVersion = "none";
-
+	// ============== 第二步：读取配置 ==============
 	readConfig();
+
 	if (ConfigVersion != RightConfigVersion) {
 		if (QMessageBox::warning(NULL, QString::fromUtf8("万能倒计时 - 警告"), QString::fromUtf8("配置文件版本不匹配，可能导致程序运行不正常，是否继续？\n请删除版本不匹配的配置文件，重新启动程序将生成符合版本的默认配置文件。\n(点击'取消'将退出程序)"), QMessageBox::Yes | QMessageBox::Cancel) != QMessageBox::Yes) exit(0);
 	}
 
 	this->setWindowFlags(Qt::FramelessWindowHint | Qt::Tool | (SmallWindowOnTopOrBottom ? Qt::WindowStaysOnTopHint : Qt::WindowStaysOnBottomHint));
 
-	// 先初始化透明度效果
+	SmallWindowPosition = 1;
+	isSetting = false;
+	isCountdownAudio = true;
+	isHeartbeatAudio = true;
+	isShowBigWindow = true;
+	SmallWindowOnTopOrBottom = true;
+	LogoPixelMultiplier = 2682.0 / 2048.0;
+
+	// ============== 第三步：创建声音效果 ==============
+	CountdownSoundEffect = new QSoundEffect(this);
+	CountdownSoundEffect->setSource(QUrl::fromLocalFile("sounds/countdown.wav"));
+	HeartbeatSoundEffect = new QSoundEffect(this);
+	HeartbeatSoundEffect->setSource(QUrl::fromLocalFile("sounds/heartbeat.wav"));
+
+	// ============== 第四步：初始化透明度效果 ==============
 	NumberLabelOpacityEffect = new QGraphicsOpacityEffect();
 	StartWindowBlockLabel1OpacityEffect = new QGraphicsOpacityEffect();
 	StartWindowBlockLabel2OpacityEffect = new QGraphicsOpacityEffect();
 	StartWindowBlockLabel3OpacityEffect = new QGraphicsOpacityEffect();
 	StartWindowBlockLabel4OpacityEffect = new QGraphicsOpacityEffect();
+
+	// ============== 第五步：创建所有控件 ==============
+	// 注意：这里只创建控件，不设置语言相关文本
 
 	// Widgets
 	StartWindow = new QWidget;
@@ -152,14 +194,12 @@ UniversalTimer::UniversalTimer(QWidget* parent)
 
 	// MessageBoxes
 	AskExitMsgBox = new QMessageBox(this);
-	AskExitMsgBox->setWindowTitle(QString::fromUtf8("万能倒计时 - 提示"));
-	AskExitMsgBox->setText(QString::fromUtf8("确定要退出吗？"));
+	AskExitMsgBox->setWindowTitle("Universal Timer - Prompt");  // 英文默认
+	AskExitMsgBox->setText("Are you sure you want to quit?");
 	AskExitMsgBox->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
 	AskExitMsgBox->setDefaultButton(QMessageBox::No);
 	AskExitMsgBox->setIcon(QMessageBox::Question);
 	AskExitMsgBox->setWindowOpacity(0.85);
-
-	LogoPixelMultiplier = 2682.0 / 2048.0;
 
 	// Labels
 	SmallWindowUnderlyingLabel = new QLabel(this);
@@ -168,6 +208,7 @@ UniversalTimer::UniversalTimer(QWidget* parent)
 	border = this->height() * 0.025;
 	SmallWindowUnderlyingLabel->setStyleSheet("background-color: rgba(255, 255, 255, 0.5); border-radius: " + QString::number(borderRadius) + "px;");
 	SmallWindowUnderlyingLabel->show();
+
 	SmallWindowLabel = new QLabel(this);
 	SmallWindowLabel->setGeometry(0, 0, this->width() - desktop.height() * 0.05, desktop.height() * 0.05);
 	SmallWindowLabel->setStyleSheet("color: rgb(200, 0, 0);");
@@ -183,6 +224,7 @@ UniversalTimer::UniversalTimer(QWidget* parent)
 	SmallWindowLogoLabel->setScaledContents(true);
 	SmallWindowLogoLabel->show();
 
+	// StartWindow 相关 Labels
 	StartWindowUnderlyingLabel = new QLabel(StartWindow);
 	StartWindowUnderlyingLabel->setGeometry(0, 0, desktop.width(), desktop.height());
 	StartWindowUnderlyingLabel->setStyleSheet("background-color: rgba(0, 0, 0, 0.75);");
@@ -277,28 +319,29 @@ UniversalTimer::UniversalTimer(QWidget* parent)
 	borderRadius = this->height() / 4;
 	border = this->height() * 0.025;
 	font.setPixelSize(this->height() * 0.1);
+
 	SmallWindowSettingTextGb = new QGroupBox(this);
 	SmallWindowSettingTextGb->setGeometry(this->width() * 0.1, this->height() * 2, desktop.width() * 0.465, desktop.height() * 0.2);
 	SmallWindowSettingTextGb->setStyleSheet("background-color: rgba(235, 235, 235, 0.5); border-radius: " + QString::number(borderRadius) + "px; border: " + QString::number(border) + "px solid rgb(235, 235, 235); ");
-	SmallWindowSettingTextGb->setTitle(QString::fromUtf8("文本和时间"));
+	SmallWindowSettingTextGb->setTitle("Text and Time");  // 英文默认
 	SmallWindowSettingTextGb->show();
 
 	SmallWindowSettingBigWindowGb = new QGroupBox(this);
 	SmallWindowSettingBigWindowGb->setGeometry(this->width() * 0.1, this->height() * 6.5, desktop.width() * 0.465, desktop.height() * 0.1);
 	SmallWindowSettingBigWindowGb->setStyleSheet("background-color: rgba(235, 235, 235, 0.5); border-radius: " + QString::number(borderRadius) + "px; border: " + QString::number(border) + "px solid rgb(235, 235, 235); ");
-	SmallWindowSettingBigWindowGb->setTitle(QString::fromUtf8("全屏提醒"));
+	SmallWindowSettingBigWindowGb->setTitle("Full Screen Reminder");  // 英文默认
 	SmallWindowSettingBigWindowGb->show();
 
 	SmallWindowSettingSmallWindowOnTopOrBottomGb = new QGroupBox(this);
 	SmallWindowSettingSmallWindowOnTopOrBottomGb->setGeometry(this->width() * 0.1, this->height() * 9, desktop.width() * 0.465, desktop.height() * 0.075);
 	SmallWindowSettingSmallWindowOnTopOrBottomGb->setStyleSheet("background-color: rgba(235, 235, 235, 0.5); border-radius: " + QString::number(borderRadius) + "px; border: " + QString::number(border) + "px solid rgb(235, 235, 235); ");
-	SmallWindowSettingSmallWindowOnTopOrBottomGb->setTitle(QString::fromUtf8("小窗口层级"));
+	SmallWindowSettingSmallWindowOnTopOrBottomGb->setTitle("Small Window Level");  // 英文默认
 	SmallWindowSettingSmallWindowOnTopOrBottomGb->show();
 
 	// Labels in GroupBoxes
 	SettingTextSmallWindowTextLabel = new QLabel(SmallWindowSettingTextGb);
 	SettingTextSmallWindowTextLabel->setGeometry(0, SmallWindowSettingTextGb->height() * 0.1, SmallWindowSettingTextGb->width(), SmallWindowSettingTextGb->height() * 0.175);
-	SettingTextSmallWindowTextLabel->setText(QString::fromUtf8("小窗口文本:"));
+	SettingTextSmallWindowTextLabel->setText("Small window text:");  // 英文默认
 	SettingTextSmallWindowTextLabel->setStyleSheet("background-color: rgba(235, 235, 235, 0.5); border-radius: 0; border: " + QString::number(border) + "px solid rgb(235, 235, 235);");
 	font.setPixelSize(SettingTextSmallWindowTextLabel->height() * 0.5);
 	SettingTextSmallWindowTextLabel->setFont(font);
@@ -306,21 +349,21 @@ UniversalTimer::UniversalTimer(QWidget* parent)
 
 	SettingTextStartWindowTextLabel = new QLabel(SmallWindowSettingTextGb);
 	SettingTextStartWindowTextLabel->setGeometry(0, SmallWindowSettingTextGb->height() * 0.275, SmallWindowSettingTextGb->width(), SmallWindowSettingTextGb->height() * 0.175);
-	SettingTextStartWindowTextLabel->setText(QString::fromUtf8("大窗口文本:"));
+	SettingTextStartWindowTextLabel->setText("Large window text:");  // 英文默认
 	SettingTextStartWindowTextLabel->setStyleSheet("background-color: rgba(235, 235, 235, 0.5); border-radius: 0; border: " + QString::number(border) + "px solid rgb(235, 235, 235);");
 	SettingTextStartWindowTextLabel->setFont(font);
 	SettingTextStartWindowTextLabel->show();
 
 	SettingTextStartWindowEnglishLabel = new QLabel(SmallWindowSettingTextGb);
 	SettingTextStartWindowEnglishLabel->setGeometry(0, SmallWindowSettingTextGb->height() * 0.45, SmallWindowSettingTextGb->width(), SmallWindowSettingTextGb->height() * 0.175);
-	SettingTextStartWindowEnglishLabel->setText(QString::fromUtf8("大窗口英文:"));
+	SettingTextStartWindowEnglishLabel->setText("Large window English:");  // 英文默认
 	SettingTextStartWindowEnglishLabel->setStyleSheet("background-color: rgba(235, 235, 235, 0.5); border-radius: 0; border: " + QString::number(border) + "px solid rgb(235, 235, 235);");
 	SettingTextStartWindowEnglishLabel->setFont(font);
 	SettingTextStartWindowEnglishLabel->show();
 
 	SettingTextTimeLabel = new QLabel(SmallWindowSettingTextGb);
 	SettingTextTimeLabel->setGeometry(0, SmallWindowSettingTextGb->height() * 0.625, SmallWindowSettingTextGb->width(), SmallWindowSettingTextGb->height() * 0.175);
-	SettingTextTimeLabel->setText(QString::fromUtf8("终点时间:"));
+	SettingTextTimeLabel->setText("Target time:");  // 英文默认
 	SettingTextTimeLabel->setStyleSheet("background-color: rgba(235, 235, 235, 0.5); border-radius: 0; border: " + QString::number(border) + "px solid rgb(235, 235, 235);");
 	SettingTextTimeLabel->setFont(font);
 	SettingTextTimeLabel->show();
@@ -340,7 +383,7 @@ UniversalTimer::UniversalTimer(QWidget* parent)
 	SettingTextYesBtn = new QPushButton(SmallWindowSettingTextGb);
 	SettingTextYesBtn->setGeometry(0, SmallWindowSettingTextGb->height() * 0.8, SmallWindowSettingTextGb->width(), SmallWindowSettingTextGb->height() * 0.2);
 	SettingTextYesBtn->setStyleSheet("QPushButton{background-color: rgba(235, 235, 235, 0.5); border-top-left-radius: 0; border-top-right-radius: 0; border: " + QString::number(border) + "px solid rgb(235, 235, 235);} QPushButton:hover{background-color: rgba(255, 255, 255, 0.6);} QPushButton:pressed{background-color: rgba(100, 100, 100, 0.3);}");
-	SettingTextYesBtn->setText(QString::fromUtf8("保存"));
+	SettingTextYesBtn->setText("Save");  // 英文默认
 	font.setPixelSize(SettingTextYesBtn->height() * 0.6);
 	SettingTextYesBtn->setFont(font);
 	SettingTextYesBtn->show();
@@ -348,7 +391,7 @@ UniversalTimer::UniversalTimer(QWidget* parent)
 	SettingBigWindowTryBtn = new QPushButton(SmallWindowSettingBigWindowGb);
 	SettingBigWindowTryBtn->setGeometry(SmallWindowSettingBigWindowGb->width() * 0.8, SmallWindowSettingBigWindowGb->height() * 0.2, SmallWindowSettingBigWindowGb->width() * 0.2, SmallWindowSettingBigWindowGb->height() * 0.8);
 	SettingBigWindowTryBtn->setStyleSheet("QPushButton{background-color: rgba(235, 235, 235, 0.5); border-top-right-radius: 0; border-top-left-radius: 0; border-bottom-left-radius: 0; border: " + QString::number(border) + "px solid rgb(235, 235, 235);} QPushButton:hover{background-color: rgba(255, 255, 255, 0.6);} QPushButton:pressed{background-color: rgba(100, 100, 100, 0.3);} QPushButton:disabled{background-color: rgba(155, 155, 155, 0.25); border: " + QString::number(border) + "px solid rgb(155, 155, 155);}");
-	SettingBigWindowTryBtn->setText(QString::fromUtf8("立即\n播放\n动画"));
+	SettingBigWindowTryBtn->setText("Play\nAnimation\nNow");  // 英文默认
 	SettingBigWindowTryBtn->setEnabled(isShowBigWindow);
 	font.setPixelSize(SettingBigWindowTryBtn->height() * 0.2);
 	SettingBigWindowTryBtn->setFont(font);
@@ -358,7 +401,7 @@ UniversalTimer::UniversalTimer(QWidget* parent)
 	BilibiliBtn->setGeometry(this->width() * 0.1, this->height() * 12, desktop.width() * 0.465, desktop.height() * 0.05);
 	borderRadius = BilibiliBtn->height();
 	BilibiliBtn->setStyleSheet("QPushButton{background-color: rgba(255, 102, 153, 0.5); border-top-left-radius: " + QString::number(borderRadius) + "px; border-top-right-radius: " + QString::number(borderRadius) + "px; border: " + QString::number(border) + "px solid rgb(255, 102, 153);} QPushButton:hover{background-color: rgba(255, 102, 153, 0.6);} QPushButton:pressed{background-color: rgba(255, 102, 153, 0.2);}");
-	BilibiliBtn->setText(QString::fromUtf8("哔哩哔哩：@龙ger_longer"));
+	BilibiliBtn->setText("Bilibili: @龙ger_longer");
 	font.setPixelSize(BilibiliBtn->height() * 0.6);
 	BilibiliBtn->setFont(font);
 	BilibiliBtn->show();
@@ -366,7 +409,7 @@ UniversalTimer::UniversalTimer(QWidget* parent)
 	GithubBtn = new QPushButton(this);
 	GithubBtn->setGeometry(this->width() * 0.1, this->height() * 13, desktop.width() * 0.465, desktop.height() * 0.05);
 	GithubBtn->setStyleSheet("QPushButton{background-color: rgba(135, 205, 250, 0.5); border-bottom-left-radius: 0; border-bottom-left-radius: " + QString::number(borderRadius) + "px; border-bottom-right-radius: " + QString::number(borderRadius) + "px; border: " + QString::number(border) + "px solid rgb(135, 205, 250);} QPushButton:hover{background-color: rgba(135, 205, 250, 0.6);} QPushButton:pressed{background-color: rgba(135, 205, 250, 0.2);}");
-	GithubBtn->setText(QString::fromUtf8("Github开源仓库"));
+	GithubBtn->setText("GitHub Open Source Repository");  // 英文默认
 	GithubBtn->setFont(font);
 	GithubBtn->show();
 
@@ -374,7 +417,7 @@ UniversalTimer::UniversalTimer(QWidget* parent)
 	ExitBtn->setGeometry(this->width() * 0.1, this->height() * 15, desktop.width() * 0.465, desktop.height() * 0.05);
 	borderRadius = ExitBtn->height() / 2;
 	ExitBtn->setStyleSheet("QPushButton{background-color: rgba(235, 235, 235, 0.5); border-radius: " + QString::number(borderRadius) + "px; border: " + QString::number(border) + "px solid rgb(235, 235, 235);} QPushButton:hover{background-color: rgba(255, 255, 255, 0.6);} QPushButton:pressed{background-color: rgba(235, 235, 235, 0.3);}");
-	ExitBtn->setText(QString::fromUtf8("退出"));
+	ExitBtn->setText("Exit");  // 英文默认
 	ExitBtn->setFont(font);
 	ExitBtn->show();
 
@@ -383,7 +426,7 @@ UniversalTimer::UniversalTimer(QWidget* parent)
 	SettingTextSmallWindowTextLedt = new QLineEdit(SettingTextSmallWindowTextLabel);
 	SettingTextSmallWindowTextLedt->setGeometry(SettingTextSmallWindowTextLabel->width() * 0.4, 0, SettingTextSmallWindowTextLabel->width() * 0.6, SettingTextSmallWindowTextLabel->height());
 	SettingTextSmallWindowTextLedt->setText(SmallWindowText);
-	SettingTextSmallWindowTextLedt->setPlaceholderText(QString::fromUtf8("小窗口文本"));
+	SettingTextSmallWindowTextLedt->setPlaceholderText("Small window text");  // 英文默认
 	SettingTextSmallWindowTextLedt->setStyleSheet("QLineEdit{background-color: rgba(235, 235, 235, 0.5); padding-left: " + QString::number(borderRadius / 2) + "px; border-radius: " + QString::number(borderRadius) + "px; border-top-right-radius: 0; border-bottom-right-radius: 0; border: " + QString::number(border) + "px solid rgb(235, 235, 235); } QLineEdit:focus{background-color: rgba(135, 205, 250, 0.6); border: " + QString::number(border) + "px solid rgb(0, 190, 255); }");
 	font.setPixelSize(SettingTextSmallWindowTextLedt->height() * 0.6);
 	SettingTextSmallWindowTextLedt->setFont(font);
@@ -392,7 +435,7 @@ UniversalTimer::UniversalTimer(QWidget* parent)
 	SettingTextStartWindowTextLedt = new QLineEdit(SettingTextStartWindowTextLabel);
 	SettingTextStartWindowTextLedt->setGeometry(SettingTextStartWindowTextLabel->width() * 0.4, 0, SettingTextStartWindowTextLabel->width() * 0.6, SettingTextStartWindowTextLabel->height());
 	SettingTextStartWindowTextLedt->setText(StartWindowText);
-	SettingTextStartWindowTextLedt->setPlaceholderText(QString::fromUtf8("大窗口文本"));
+	SettingTextStartWindowTextLedt->setPlaceholderText("Large window text");  // 英文默认
 	SettingTextStartWindowTextLedt->setStyleSheet("QLineEdit{background-color: rgba(235, 235, 235, 0.5); padding-left: " + QString::number(borderRadius / 2) + "px; border-radius: " + QString::number(borderRadius) + "px; border-top-right-radius: 0; border-bottom-right-radius: 0; border: " + QString::number(border) + "px solid rgb(235, 235, 235); } QLineEdit:focus{background-color: rgba(135, 205, 250, 0.6); border: " + QString::number(border) + "px solid rgb(0, 190, 255); }");
 	SettingTextStartWindowTextLedt->setFont(font);
 	SettingTextStartWindowTextLedt->show();
@@ -400,7 +443,7 @@ UniversalTimer::UniversalTimer(QWidget* parent)
 	SettingTextStartWindowEnglishLedt = new QLineEdit(SettingTextStartWindowEnglishLabel);
 	SettingTextStartWindowEnglishLedt->setGeometry(SettingTextStartWindowEnglishLabel->width() * 0.4, 0, SettingTextStartWindowEnglishLabel->width() * 0.6, SettingTextStartWindowEnglishLabel->height());
 	SettingTextStartWindowEnglishLedt->setText(StartWindowEnglishText);
-	SettingTextStartWindowEnglishLedt->setPlaceholderText(QString::fromUtf8("大窗口英文"));
+	SettingTextStartWindowEnglishLedt->setPlaceholderText("Large window English");  // 英文默认
 	SettingTextStartWindowEnglishLedt->setStyleSheet("QLineEdit{background-color: rgba(235, 235, 235, 0.5); padding-left: " + QString::number(borderRadius / 2) + "px; border-radius: " + QString::number(borderRadius) + "px; border-top-right-radius: 0; border-bottom-right-radius: 0; border: " + QString::number(border) + "px solid rgb(235, 235, 235); } QLineEdit:focus{background-color: rgba(135, 205, 250, 0.6); border: " + QString::number(border) + "px solid rgb(0, 190, 255); }");
 	SettingTextStartWindowEnglishLedt->setFont(font);
 	SettingTextStartWindowEnglishLedt->show();
@@ -408,7 +451,7 @@ UniversalTimer::UniversalTimer(QWidget* parent)
 	SettingTextTimeLedt = new QLineEdit(SettingTextTimeLabel);
 	SettingTextTimeLedt->setGeometry(SettingTextTimeLabel->width() * 0.4, 0, SettingTextTimeLabel->width() * 0.6, SettingTextTimeLabel->height());
 	SettingTextTimeLedt->setText(targetDateTime.toString("yyyy-MM-dd hh:mm:ss"));
-	SettingTextTimeLedt->setPlaceholderText(QString::fromUtf8("终点时间"));
+	SettingTextTimeLedt->setPlaceholderText("Target time");  // 英文默认
 	SettingTextTimeLedt->setStyleSheet("QLineEdit{background-color: rgba(235, 235, 235, 0.5); padding-left: " + QString::number(borderRadius / 2) + "px; border-radius: " + QString::number(borderRadius) + "px; border-top-right-radius: 0; border-bottom-right-radius: 0; border: " + QString::number(border) + "px solid rgb(235, 235, 235); } QLineEdit:focus{background-color: rgba(135, 205, 250, 0.6); border: " + QString::number(border) + "px solid rgb(0, 190, 255); }");
 	SettingTextTimeLedt->setFont(font);
 	SettingTextTimeLedt->show();
@@ -416,7 +459,7 @@ UniversalTimer::UniversalTimer(QWidget* parent)
 	// CheckBoxes
 	SettingBigWindowIsShowCb = new QCheckBox(SmallWindowSettingBigWindowGb);
 	SettingBigWindowIsShowCb->setGeometry(0, SmallWindowSettingBigWindowGb->height() * 0.2, SmallWindowSettingBigWindowGb->width() * 0.8, SmallWindowSettingBigWindowGb->height() * 0.8 / 3);
-	SettingBigWindowIsShowCb->setText(QString::fromUtf8("是否显示全屏提醒"));
+	SettingBigWindowIsShowCb->setText("Show full screen reminder");  // 英文默认
 	SettingBigWindowIsShowCb->setChecked(isShowBigWindow);
 	SettingBigWindowIsShowCb->setStyleSheet("background-color: rgba(235, 235, 235, 0.5); border-radius: 0; border: " + QString::number(border) + "px solid rgb(235, 235, 235);");
 	font.setPixelSize(SettingBigWindowIsShowCb->height() * 0.5);
@@ -425,7 +468,7 @@ UniversalTimer::UniversalTimer(QWidget* parent)
 
 	SettingBigWindowIsCountdownAudioCb = new QCheckBox(SmallWindowSettingBigWindowGb);
 	SettingBigWindowIsCountdownAudioCb->setGeometry(0, SmallWindowSettingBigWindowGb->height() * 0.2 + SmallWindowSettingBigWindowGb->height() * 0.8 / 3, SmallWindowSettingBigWindowGb->width() * 0.8, SmallWindowSettingBigWindowGb->height() * 0.8 / 3);
-	SettingBigWindowIsCountdownAudioCb->setText(QString::fromUtf8("剩余时间≤30天时是否播放倒计时提醒音"));
+	SettingBigWindowIsCountdownAudioCb->setText("Play countdown sound when ≤30 days");  // 英文默认
 	SettingBigWindowIsCountdownAudioCb->setChecked(isCountdownAudio);
 	SettingBigWindowIsCountdownAudioCb->setEnabled(isShowBigWindow);
 	SettingBigWindowIsCountdownAudioCb->setStyleSheet("QCheckBox{background-color: rgba(235, 235, 235, 0.5); border-radius: 0; border: " + QString::number(border) + "px solid rgb(235, 235, 235);} QCheckBox:disabled{background-color: rgba(155, 155, 155, 0.25); border: " + QString::number(border) + "px solid rgb(155, 155, 155);}");
@@ -434,7 +477,7 @@ UniversalTimer::UniversalTimer(QWidget* parent)
 
 	SettingBigWindowIsHeartbeatAudioCb = new QCheckBox(SmallWindowSettingBigWindowGb);
 	SettingBigWindowIsHeartbeatAudioCb->setGeometry(0, SmallWindowSettingBigWindowGb->height() * 0.2 + 2 * SmallWindowSettingBigWindowGb->height() * 0.8 / 3, SmallWindowSettingBigWindowGb->width() * 0.8, SmallWindowSettingBigWindowGb->height() * 0.8 / 3);
-	SettingBigWindowIsHeartbeatAudioCb->setText(QString::fromUtf8("剩余时间≤14天时是否播放心跳提醒音"));
+	SettingBigWindowIsHeartbeatAudioCb->setText("Play heartbeat sound when ≤14 days");  // 英文默认
 	SettingBigWindowIsHeartbeatAudioCb->setChecked(isHeartbeatAudio);
 	SettingBigWindowIsHeartbeatAudioCb->setEnabled(isShowBigWindow);
 	SettingBigWindowIsHeartbeatAudioCb->setStyleSheet("QCheckBox{background-color: rgba(235, 235, 235, 0.5); border-top-right-radius: 0; border-top-left-radius: 0; border-bottom-right-radius: 0; border: " + QString::number(border) + "px solid rgb(235, 235, 235);} QCheckBox:disabled{background-color: rgba(155, 155, 155, 0.25); border: " + QString::number(border) + "px solid rgb(155, 155, 155);}");
@@ -444,7 +487,6 @@ UniversalTimer::UniversalTimer(QWidget* parent)
 	// ComboBoxes
 	SettingLanguageCmb = new QComboBox(this);
 	SettingLanguageCmb->setGeometry(this->width() * 0.1, this->height() * 17, desktop.width() * 0.465, desktop.height() * 0.05);
-	SettingLanguageCmb->setCurrentIndex(0);
 	borderRadius = SettingLanguageCmb->height() / 2;
 	SettingLanguageCmb->setStyleSheet("QComboBox {\
                                            background-color: rgba(235, 235, 235, 0.5);\
@@ -503,12 +545,11 @@ UniversalTimer::UniversalTimer(QWidget* parent)
 	SettingLanguageCmb->view()->setFont(font);
 	SettingLanguageCmb->view()->setAttribute(Qt::WA_TranslucentBackground);
 	SettingLanguageCmb->show();
-	scanLanguage();
 
 	// RadioButtons
 	SettingSmallWindowOnTopRbtn = new QRadioButton(SmallWindowSettingSmallWindowOnTopOrBottomGb);
 	SettingSmallWindowOnTopRbtn->setGeometry(0, SmallWindowSettingSmallWindowOnTopOrBottomGb->height() * 0.2, SmallWindowSettingSmallWindowOnTopOrBottomGb->width(), SmallWindowSettingSmallWindowOnTopOrBottomGb->height() * 0.4);
-	SettingSmallWindowOnTopRbtn->setText(QString::fromUtf8("小窗口置顶"));
+	SettingSmallWindowOnTopRbtn->setText("Small window on top");  // 英文默认
 	SettingSmallWindowOnTopRbtn->setChecked(SmallWindowOnTopOrBottom);
 	SettingSmallWindowOnTopRbtn->setStyleSheet("background-color: rgba(235, 235, 235, 0.5); border-radius: 0; border: " + QString::number(border) + "px solid rgb(235, 235, 235);");
 	font.setPixelSize(SettingSmallWindowOnTopRbtn->height() * 0.6);
@@ -517,7 +558,7 @@ UniversalTimer::UniversalTimer(QWidget* parent)
 
 	SettingSmallWindowOnBottomRbtn = new QRadioButton(SmallWindowSettingSmallWindowOnTopOrBottomGb);
 	SettingSmallWindowOnBottomRbtn->setGeometry(0, SmallWindowSettingSmallWindowOnTopOrBottomGb->height() * 0.6, SmallWindowSettingSmallWindowOnTopOrBottomGb->width(), SmallWindowSettingSmallWindowOnTopOrBottomGb->height() * 0.4);
-	SettingSmallWindowOnBottomRbtn->setText(QString::fromUtf8("小窗口置底"));
+	SettingSmallWindowOnBottomRbtn->setText("Small window on bottom");  // 英文默认
 	SettingSmallWindowOnBottomRbtn->setChecked(!SmallWindowOnTopOrBottom);
 	SettingSmallWindowOnBottomRbtn->setStyleSheet("background-color: rgba(235, 235, 235, 0.5); border-top-right-radius: 0; border-top-left-radius: 0; border: " + QString::number(border) + "px solid rgb(235, 235, 235);");
 	SettingSmallWindowOnBottomRbtn->setFont(font);
@@ -754,7 +795,6 @@ UniversalTimer::UniversalTimer(QWidget* parent)
 	else SmallWindowStartAnimationGroup->start();
 
 	selectLanguage();
-	readLanguage();
 
 	// connects
 	// 每隔1秒更新
@@ -906,10 +946,23 @@ UniversalTimer::UniversalTimer(QWidget* parent)
 	connect(SettingLanguageCmb, &QComboBox::currentTextChanged, [&] {
 		changeLanguage();
 		});
+
+	// 创建所有控件后，加载语言
+	loadLanguage(currentLangCode);
+
+	// 扫描可用的语言
+	scanLanguage();
+	selectLanguage();
+
+	// 应用当前语言
+	applyLanguage();
 }
 
-UniversalTimer::~UniversalTimer()
-{
+UniversalTimer::~UniversalTimer() {
+	// 清理语言设置
+	if (langSettings) {
+		delete langSettings;
+	}
 }
 
 
@@ -973,8 +1026,10 @@ void UniversalTimer::readConfig() {
 			list = line[i].split("=");
 			if (list[0] == "ConfigVersion")
 				ConfigVersion = list[1];
-			else if (list[0] == "Language")
-				Language = list[1];
+			else if (list[0] == "Language") {
+				// 使用新的语言代码格式
+				currentLangCode = list[1];
+			}
 			else if (list[0] == "SmallWindowText")
 				SmallWindowText = list[1];
 			else if (list[0] == "StartWindowText")
@@ -997,20 +1052,21 @@ void UniversalTimer::readConfig() {
 		file.close();
 		readTimeConfig();
 	}
-	// 若无配置文件，则为第一次使用，显示欢迎界面
 	else {
 		QMessageBox::information(NULL, QString::fromUtf8("Welcome"), QString::fromUtf8("欢迎使用万能倒计时！\n\n您可以通过本软件设置倒计时，然后清晰明了地查看距离倒计时还剩多少时间！\n\n开始后，点击倒计时条的三条杠，设置完毕并开始使用吧！"));
 		ConfigVersion = RightConfigVersion;
+		currentLangCode = "zh_CN";  // 默认简体中文
 		writeConfig();
 		writeTimeConfig();
 	}
 }
+
 void UniversalTimer::writeConfig() {
 	QFile file("config.ini");
 	if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
 		QTextStream out(&file);
 		out << "ConfigVersion=" << RightConfigVersion << "\n";
-		out << "Language=" << Language << "\n";
+		out << "Language=" << currentLangCode << "\n";  // 保存新的语言代码
 		out << "SmallWindowText=" << SmallWindowText << "\n";
 		out << "StartWindowText=" << StartWindowText << "\n";
 		out << "StartWindowEnglishText=" << StartWindowEnglishText << "\n";
@@ -1046,103 +1102,6 @@ void UniversalTimer::writeTimeConfig() {
 		file.close();
 	}
 }
-
-
-void UniversalTimer::scanLanguage() {
-	// 检测存在的语言
-	if (QFile::exists("lang/en_us.lang")) {
-		SettingLanguageCmb->addItem(QString::fromUtf8("English"));
-	}
-	if (QFile::exists("lang/zh_cn.lang")) {
-		SettingLanguageCmb->addItem(QString::fromUtf8("简体中文"));
-	}
-	if (QFile::exists("lang/zh_tw.lang")) {
-		SettingLanguageCmb->addItem(QString::fromUtf8("繁體中文"));
-	}
-}
-void UniversalTimer::selectLanguage() {
-	if (Language == "en_us") {
-		SettingLanguageCmb->setCurrentText(QString::fromUtf8("English"));
-	}
-	else if (Language == "zh_cn") {
-		SettingLanguageCmb->setCurrentText(QString::fromUtf8("简体中文"));
-	}
-	else if (Language == "zh_tw") {
-		SettingLanguageCmb->setCurrentText(QString::fromUtf8("繁體中文"));
-	}
-}
-void UniversalTimer::changeLanguage() {
-	// 判断选择了哪个语言
-	if (SettingLanguageCmb->currentText() == QString::fromUtf8("English")) {
-		Language = "en";
-	}
-	else if (SettingLanguageCmb->currentText() == QString::fromUtf8("简体中文")) {
-		Language = "zh-CN";
-	}
-	else if (SettingLanguageCmb->currentText() == QString::fromUtf8("繁體中文")) {
-		Language = "zh-TW";
-	}
-	readLanguage();
-	writeConfig();
-}
-
-void UniversalTimer::readLanguage() {
-	QFile file("lang/" + Language + "/main.lang");
-	if (file.open(QIODevice::ReadOnly)) {
-		QTextStream in(&file);
-		all = in.readAll();
-		line = all.split("\n");
-		for (int i = 0; i < line.size(); i++) {
-			list = line[i].split("=");
-			if (list[0] == "LanguageVersion")
-				LanguageVersion = list[1];
-			else if (list[0] == "SmallWindowSettingTextGb_text")
-				SmallWindowSettingTextGb->setTitle(list[1]);
-			else if (list[0] == "SmallWindowSettingBigWindowGb_text")
-				SmallWindowSettingBigWindowGb->setTitle(list[1]);
-			else if (list[0] == "SmallWindowSettingSmallWindowOnTopOrBottomGb_text")
-				SmallWindowSettingSmallWindowOnTopOrBottomGb->setTitle(list[1]);
-			else if (list[0] == "SettingTextSmallWindowTextLabel_text")
-				SettingTextSmallWindowTextLabel->setText(list[1]);
-			else if (list[0] == "SettingTextStartWindowTextLabel_text")
-				SettingTextStartWindowTextLabel->setText(list[1]);
-			else if (list[0] == "SettingTextStartWindowEnglishLabel_text")
-				SettingTextStartWindowEnglishLabel->setText(list[1]);
-			else if (list[0] == "SettingTextTimeLabel_text")
-				SettingTextTimeLabel->setText(list[1]);
-			else if (list[0] == "SettingTextYesBtn_text")
-				SettingTextYesBtn->setText(list[1]);
-			else if (list[0] == "SettingBigWindowIsShowCb_text")
-				SettingBigWindowIsShowCb->setText(list[1]);
-			else if (list[0] == "SettingBigWindowIsCountdownAudioCb_text")
-				SettingBigWindowIsCountdownAudioCb->setText(list[1]);
-			else if (list[0] == "SettingBigWindowIsHeartbeatAudioCb_text")
-				SettingBigWindowIsHeartbeatAudioCb->setText(list[1]);
-			else if (list[0] == "SettingBigWindowTryBtn_text")
-				SettingBigWindowTryBtn->setText(list[1]);
-			else if (list[0] == "SettingSmallWindowOnTopRbtn_text")
-				SettingSmallWindowOnTopRbtn->setText(list[1]);
-			else if (list[0] == "SettingSmallWindowOnBottomRbtn_text")
-				SettingSmallWindowOnBottomRbtn->setText(list[1]);
-			else if (list[0] == "BilibiliBtn_text")
-				BilibiliBtn->setText(list[1] + QString::fromUtf8(": @龙ger_longer"));
-			else if (list[0] == "GithubBtn_text")
-				GithubBtn->setText(list[1]);
-			else if (list[0] == "ExitBtn_text")
-				ExitBtn->setText(list[1]);
-			else if (list[0] == "AskExitMsgBox_title")
-				AskExitMsgBox->setWindowTitle(list[1]);
-			else if (list[0] == "AskExitMsgBox_text")
-				AskExitMsgBox->setText(list[1]);
-		}
-		file.close();
-	}
-	/*if (LanguageVersion != RightLanguageVersion) {
-		QMessageBox::warning(this, "警告 Warning", "选择的语言版本不正确，可能导致程序异常。若要获取正确的版本，请前往官网或者GitHub获取正确版本。\nThe selected language version is incorrect, which may cause the program to malfunction. If you want to get the correct version, please go to the official website or GitHub to get the correct version." + LanguageVersion + RightLanguageVersion);
-	}*/
-}
-
-
 
 void UniversalTimer::startShowBigWindowAnimation() {
 	StartWindow->show();
@@ -1205,4 +1164,147 @@ void UniversalTimer::resizeEvent(QResizeEvent* event) {
 	QWidget::resizeEvent(event);
 	SmallWindowUnderlyingLabel->setGeometry(0, 0, this->width(), this->height());
 	SmallWindowMoreInfBtn->setGeometry(this->width() - desktop.height() * 0.05, 0, desktop.height() * 0.05, desktop.height() * 0.05);
+}
+
+void UniversalTimer::loadLanguage(const QString& langCode) {
+	// 构建语言文件路径
+	QString langFilePath = QString("lang/%1.lang").arg(langCode);
+
+	// 删除旧的 langSettings
+	if (langSettings) {
+		delete langSettings;
+		langSettings = nullptr;
+	}
+
+	// 如果语言文件存在，加载它
+	if (QFile::exists(langFilePath)) {
+		langSettings = new QSettings(langFilePath, QSettings::IniFormat);
+		currentLangCode = langCode;
+	}
+	else {
+		// 如果文件不存在，使用默认语言
+		qDebug() << "Language file not found:" << langFilePath;
+		if (QFile::exists("lang/zh_CN.lang")) {
+			langSettings = new QSettings("lang/zh_CN.lang", QSettings::IniFormat);
+			currentLangCode = "zh_CN";
+		}
+		else {
+			// 如果没有语言文件，创建空的 QSettings
+			langSettings = new QSettings(QSettings::IniFormat, QSettings::UserScope, "UniversalTimer", "Language");
+		}
+	}
+
+	// 应用语言
+	applyLanguage();
+}
+
+void UniversalTimer::applyLanguage() {
+	if (!langSettings) return;
+
+	langSettings->beginGroup("UI");
+
+	// 应用所有UI文本
+	SmallWindowSettingTextGb->setTitle(langSettings->value("SmallWindowSettingTextGb_text", QString::fromUtf8("文本和时间")).toString());
+	SmallWindowSettingBigWindowGb->setTitle(langSettings->value("SmallWindowSettingBigWindowGb_text", QString::fromUtf8("全屏提醒")).toString());
+	SmallWindowSettingSmallWindowOnTopOrBottomGb->setTitle(langSettings->value("SmallWindowSettingSmallWindowOnTopOrBottomGb_text", QString::fromUtf8("小窗口层级")).toString());
+
+	SettingTextSmallWindowTextLabel->setText(langSettings->value("SettingTextSmallWindowTextLabel_text", QString::fromUtf8("小窗口文本:")).toString());
+	SettingTextStartWindowTextLabel->setText(langSettings->value("SettingTextStartWindowTextLabel_text", QString::fromUtf8("大窗口文本:")).toString());
+	SettingTextStartWindowEnglishLabel->setText(langSettings->value("SettingTextStartWindowEnglishLabel_text", QString::fromUtf8("大窗口英文:")).toString());
+	SettingTextTimeLabel->setText(langSettings->value("SettingTextTimeLabel_text", QString::fromUtf8("终点时间:")).toString());
+
+	SettingTextYesBtn->setText(langSettings->value("SettingTextYesBtn_text", QString::fromUtf8("保存")).toString());
+
+	SettingBigWindowIsShowCb->setText(langSettings->value("SettingBigWindowIsShowCb_text", QString::fromUtf8("是否显示全屏提醒")).toString());
+	SettingBigWindowIsCountdownAudioCb->setText(langSettings->value("SettingBigWindowIsCountdownAudioCb_text", QString::fromUtf8("剩余时间≤30天时是否播放倒计时提醒音")).toString());
+	SettingBigWindowIsHeartbeatAudioCb->setText(langSettings->value("SettingBigWindowIsHeartbeatAudioCb_text", QString::fromUtf8("剩余时间≤14天时是否播放心跳提醒音")).toString());
+
+	SettingBigWindowTryBtn->setText(langSettings->value("SettingBigWindowTryBtn_text", QString::fromUtf8("立即\n播放\n动画")).toString());
+
+	SettingSmallWindowOnTopRbtn->setText(langSettings->value("SettingSmallWindowOnTopRbtn_text", QString::fromUtf8("小窗口置顶")).toString());
+	SettingSmallWindowOnBottomRbtn->setText(langSettings->value("SettingSmallWindowOnBottomRbtn_text", QString::fromUtf8("小窗口置底")).toString());
+
+	BilibiliBtn->setText(langSettings->value("BilibiliBtn_text", QString::fromUtf8("哔哩哔哩")).toString() + QString::fromUtf8(": @龙ger_longer"));
+	GithubBtn->setText(langSettings->value("GithubBtn_text", QString::fromUtf8("Github开源仓库")).toString());
+	ExitBtn->setText(langSettings->value("ExitBtn_text", QString::fromUtf8("退出")).toString());
+
+	AskExitMsgBox->setWindowTitle(langSettings->value("AskExitMsgBox_title", QString::fromUtf8("万能倒计时 - 提示")).toString());
+	AskExitMsgBox->setText(langSettings->value("AskExitMsgBox_text", QString::fromUtf8("确定要退出吗？")).toString());
+
+	langSettings->endGroup();
+}
+
+void UniversalTimer::scanLanguage() {
+	if (!SettingLanguageCmb) return;
+
+	SettingLanguageCmb->clear();
+
+	// 扫描 lang 目录下的 .lang 文件
+	QDir langDir("lang");
+	QStringList filters;
+	filters << "*.lang";
+	langDir.setNameFilters(filters);
+
+	QStringList langFiles = langDir.entryList();
+
+	// 定义语言名称映射
+	QMap<QString, QString> langNameMap;
+	langNameMap["en_US"] = "English";
+	langNameMap["zh_CN"] = QString::fromUtf8("简体中文");
+	langNameMap["zh_TW"] = QString::fromUtf8("繁體中文");
+
+	foreach(QString langFile, langFiles) {
+		QString langCode = langFile.left(langFile.length() - 5); // 移除 .lang 后缀
+
+		// 尝试从文件读取语言名称
+		QSettings langSetting(langDir.filePath(langFile), QSettings::IniFormat);
+		QString langName = langSetting.value("Language/Name", "").toString();
+
+		// 如果没有定义名称，使用映射或文件名
+		if (langName.isEmpty()) {
+			if (langNameMap.contains(langCode)) {
+				langName = langNameMap[langCode];
+			}
+			else {
+				langName = langCode;
+			}
+		}
+
+		SettingLanguageCmb->addItem(langName, langCode);
+	}
+
+	// 如果没有找到任何语言文件，添加默认选项
+	if (SettingLanguageCmb->count() == 0) {
+		SettingLanguageCmb->addItem("English", "en_US");
+		SettingLanguageCmb->addItem(QString::fromUtf8("简体中文"), "zh_CN");
+	}
+}
+
+void UniversalTimer::selectLanguage() {
+	if (!SettingLanguageCmb) return;
+
+	// 根据保存的语言代码选择对应的选项
+	for (int i = 0; i < SettingLanguageCmb->count(); ++i) {
+		if (SettingLanguageCmb->itemData(i).toString() == currentLangCode) {
+			SettingLanguageCmb->setCurrentIndex(i);
+			return;
+		}
+	}
+
+	// 如果没找到，默认选择第一个
+	if (SettingLanguageCmb->count() > 0) {
+		SettingLanguageCmb->setCurrentIndex(0);
+		currentLangCode = SettingLanguageCmb->itemData(0).toString();
+	}
+}
+
+void UniversalTimer::changeLanguage() {
+	if (!SettingLanguageCmb) return;
+
+	int currentIndex = SettingLanguageCmb->currentIndex();
+	if (currentIndex >= 0) {
+		QString newLangCode = SettingLanguageCmb->itemData(currentIndex).toString();
+		loadLanguage(newLangCode);
+		writeConfig();
+	}
 }

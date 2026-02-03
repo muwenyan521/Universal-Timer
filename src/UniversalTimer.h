@@ -19,6 +19,9 @@
 #include <QMouseEvent>
 #include <QResizeEvent>
 #include <QRect>
+#include <QSettings>      // 新增：添加QSettings头文件
+#include <QDir>          // 新增：添加QDir头文件
+#include <QDebug>        // 新增：添加QDebug头文件
 
 class UniversalTimer : public QWidget
 {
@@ -38,7 +41,8 @@ private:
 	void scanLanguage();
 	void selectLanguage();
 	void changeLanguage();
-	void readLanguage();
+	void loadLanguage(const QString& langCode);  // 新增：加载语言函数
+	void applyLanguage();                        // 新增：应用语言函数
 	void startShowBigWindowAnimation();
 
 	QRect desktop;
@@ -75,11 +79,9 @@ private:
 	QString RightConfigVersion;
 	QString ConfigVersion;
 
-	// 语言设置
-	QString Language;
-	// 语言版本
-	QString RightLanguageVersion;
-	QString LanguageVersion;
+	// 语言设置 - 修改为新的QSettings方式
+	QSettings* langSettings;
+	QString currentLangCode;  // 如 "en_US", "zh_CN", "zh_TW"
 
 	// 配置读取变量
 	QString all;
@@ -111,7 +113,7 @@ private:
 	QPropertyAnimation* StartWindowNumberLabelOpacityAnimation3;
 	QPropertyAnimation* StartWindowNumberLabelOpacityAnimation4;
 	QPropertyAnimation* StartWindowNumberLabelOpacityAnimation5;
-	QPropertyAnimation* StartWindowCloseOpacityAnimation;
+	QPropertyAnimation* StartWindowBigWindowCloseOpacityAnimation;  // 修改：避免重名
 
 	QPropertyAnimation* StartWindowBlockLabel1OpacityAnimation1;
 	QPropertyAnimation* StartWindowBlockLabel1OpacityAnimation2;

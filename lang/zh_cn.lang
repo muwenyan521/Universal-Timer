@@ -1,4 +1,7 @@
-LanguageVersion=1.3.0.0
+[Language]
+Name=简体中文
+
+[UI]
 SmallWindowSettingTextGb_text=文本和时间
 SmallWindowSettingBigWindowGb_text=全屏提醒
 SmallWindowSettingSmallWindowOnTopOrBottomGb_text=小窗口层级
