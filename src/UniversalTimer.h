@@ -29,14 +29,6 @@ public:
 	~UniversalTimer();
 
 private:
-	QPropertyAnimation* SmallWindowStartSettingAnimation;
-	QPropertyAnimation* SmallWindowCloseSettingAnimation;
-
-	QGraphicsOpacityEffect* NumberLabelOpacityEffect;
-	QGraphicsOpacityEffect* StartWindowBlockLabel1OpacityEffect;
-	QGraphicsOpacityEffect* StartWindowBlockLabel2OpacityEffect;
-	QGraphicsOpacityEffect* StartWindowBlockLabel3OpacityEffect;
-	QGraphicsOpacityEffect* StartWindowBlockLabel4OpacityEffect;
 
 	void updateLabel();
 	void readConfig();
