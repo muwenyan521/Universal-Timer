@@ -794,7 +794,10 @@ UniversalTimer::UniversalTimer(QWidget* parent)
 	}
 	else SmallWindowStartAnimationGroup->start();
 
-	selectLanguage();
+	// 初始化语言
+	scanLanguage();                 // 扫描可用语言
+	selectLanguage();               // 根据配置选择当前语言
+	loadLanguage(currentLangCode);  // 加载当前语言
 
 	// connects
 	// 每隔1秒更新
@@ -946,16 +949,8 @@ UniversalTimer::UniversalTimer(QWidget* parent)
 	connect(SettingLanguageCmb, &QComboBox::currentTextChanged, [&] {
 		changeLanguage();
 		});
-
-	// 创建所有控件后，加载语言
-	loadLanguage(currentLangCode);
-
-	// 扫描可用的语言
-	scanLanguage();
-	selectLanguage();
-
-	// 应用当前语言
-	applyLanguage();
+	connect(SettingLanguageCmb, QOverload<int>::of(&QComboBox::currentIndexChanged),
+		this, &UniversalTimer::changeLanguage);
 }
 
 UniversalTimer::~UniversalTimer() {
@@ -1176,23 +1171,9 @@ void UniversalTimer::loadLanguage(const QString& langCode) {
 		langSettings = nullptr;
 	}
 
-	// 如果语言文件存在，加载它
-	if (QFile::exists(langFilePath)) {
-		langSettings = new QSettings(langFilePath, QSettings::IniFormat);
-		currentLangCode = langCode;
-	}
-	else {
-		// 如果文件不存在，使用默认语言
-		qDebug() << "Language file not found:" << langFilePath;
-		if (QFile::exists("lang/zh_cn.lang")) {
-			langSettings = new QSettings("lang/zh_cn.lang", QSettings::IniFormat);
-			currentLangCode = "zh_cn";
-		}
-		else {
-			// 如果没有语言文件，创建空的 QSettings
-			langSettings = new QSettings(QSettings::IniFormat, QSettings::UserScope, "UniversalTimer", "Language");
-		}
-	}
+	// 直接加载语言文件
+	langSettings = new QSettings(langFilePath, QSettings::IniFormat);
+	currentLangCode = langCode;
 
 	// 应用语言
 	applyLanguage();
@@ -1235,54 +1216,27 @@ void UniversalTimer::applyLanguage() {
 }
 
 void UniversalTimer::scanLanguage() {
-	if (!SettingLanguageCmb) return;
-
+	// 清空下拉框
 	SettingLanguageCmb->clear();
 
 	// 扫描 lang 目录下的 .lang 文件
 	QDir langDir("lang");
-	QStringList filters;
-	filters << "*.lang";
-	langDir.setNameFilters(filters);
+	QStringList langFiles = langDir.entryList(QStringList() << "*.lang", QDir::Files);
 
-	QStringList langFiles = langDir.entryList();
-
-	// 定义语言名称映射
-	QMap<QString, QString> langNameMap;
-	langNameMap["en_us"] = "English";
-	langNameMap["zh_cn"] = QString::fromUtf8("简体中文");
-	langNameMap["zh_tw"] = QString::fromUtf8("繁體中文");
-
+	// 遍历所有语言文件
 	foreach(QString langFile, langFiles) {
 		QString langCode = langFile.left(langFile.length() - 5); // 移除 .lang 后缀
 
-		// 尝试从文件读取语言名称
+		// 从文件读取语言名称
 		QSettings langSetting(langDir.filePath(langFile), QSettings::IniFormat);
-		QString langName = langSetting.value("Language/Name", "").toString();
+		QString langName = langSetting.value("Language/Name", langCode).toString();
 
-		// 如果没有定义名称，使用映射或文件名
-		if (langName.isEmpty()) {
-			if (langNameMap.contains(langCode)) {
-				langName = langNameMap[langCode];
-			}
-			else {
-				langName = langCode;
-			}
-		}
-
+		// 添加到下拉框
 		SettingLanguageCmb->addItem(langName, langCode);
-	}
-
-	// 如果没有找到任何语言文件，添加默认选项
-	if (SettingLanguageCmb->count() == 0) {
-		SettingLanguageCmb->addItem("English", "en_us");
-		SettingLanguageCmb->addItem(QString::fromUtf8("简体中文"), "zh_cn");
 	}
 }
 
 void UniversalTimer::selectLanguage() {
-	if (!SettingLanguageCmb) return;
-
 	// 根据保存的语言代码选择对应的选项
 	for (int i = 0; i < SettingLanguageCmb->count(); ++i) {
 		if (SettingLanguageCmb->itemData(i).toString() == currentLangCode) {
@@ -1294,13 +1248,10 @@ void UniversalTimer::selectLanguage() {
 	// 如果没找到，默认选择第一个
 	if (SettingLanguageCmb->count() > 0) {
 		SettingLanguageCmb->setCurrentIndex(0);
-		currentLangCode = SettingLanguageCmb->itemData(0).toString();
 	}
 }
 
 void UniversalTimer::changeLanguage() {
-	if (!SettingLanguageCmb) return;
-
 	int currentIndex = SettingLanguageCmb->currentIndex();
 	if (currentIndex >= 0) {
 		QString newLangCode = SettingLanguageCmb->itemData(currentIndex).toString();

@@ -41,8 +41,8 @@ private:
 	void scanLanguage();
 	void selectLanguage();
 	void changeLanguage();
-	void loadLanguage(const QString& langCode);  // 新增：加载语言函数
-	void applyLanguage();                        // 新增：应用语言函数
+	void loadLanguage(const QString& langCode);
+	void applyLanguage();
 	void startShowBigWindowAnimation();
 
 	QRect desktop;
@@ -81,7 +81,8 @@ private:
 
 	// 语言设置 - 修改为新的QSettings方式
 	QSettings* langSettings;
-	QString currentLangCode;  // 如 "en_US", "zh_CN", "zh_TW"
+	QString currentLangCode;
+	QMap<QString, QString> languageMap;
 
 	// 配置读取变量
 	QString all;
