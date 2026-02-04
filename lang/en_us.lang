@@ -1,4 +1,7 @@
-LanguageVersion=1.3.0.0
+[Language]
+Name=English
+
+[UI]
 SmallWindowSettingTextGb_text=Text and Time
 SmallWindowSettingBigWindowGb_text=Full-Screen Reminder
 SmallWindowSettingSmallWindowOnTopOrBottomGb_text=Hierarchy of Small Window
