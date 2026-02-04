@@ -27,7 +27,7 @@
 UniversalTimer::UniversalTimer(QWidget* parent)
 	: QWidget(parent)
 	, langSettings(nullptr)
-	, currentLangCode("zh_CN")
+	, currentLangCode("zh_cn")
 	, CountdownSoundEffect(nullptr)
 	, HeartbeatSoundEffect(nullptr)
 	, NumberLabelOpacityEffect(nullptr)
@@ -1055,7 +1055,7 @@ void UniversalTimer::readConfig() {
 	else {
 		QMessageBox::information(NULL, QString::fromUtf8("Welcome"), QString::fromUtf8("欢迎使用万能倒计时！\n\n您可以通过本软件设置倒计时，然后清晰明了地查看距离倒计时还剩多少时间！\n\n开始后，点击倒计时条的三条杠，设置完毕并开始使用吧！"));
 		ConfigVersion = RightConfigVersion;
-		currentLangCode = "zh_CN";  // 默认简体中文
+		currentLangCode = "zh_cn";  // 默认简体中文
 		writeConfig();
 		writeTimeConfig();
 	}
@@ -1168,7 +1168,7 @@ void UniversalTimer::resizeEvent(QResizeEvent* event) {
 
 void UniversalTimer::loadLanguage(const QString& langCode) {
 	// 构建语言文件路径
-	QString langFilePath = QString("lang/%1.lang").arg(langCode);
+	QString langFilePath = QString("./lang/%1.lang").arg(langCode);
 
 	// 删除旧的 langSettings
 	if (langSettings) {
@@ -1184,9 +1184,9 @@ void UniversalTimer::loadLanguage(const QString& langCode) {
 	else {
 		// 如果文件不存在，使用默认语言
 		qDebug() << "Language file not found:" << langFilePath;
-		if (QFile::exists("lang/zh_CN.lang")) {
-			langSettings = new QSettings("lang/zh_CN.lang", QSettings::IniFormat);
-			currentLangCode = "zh_CN";
+		if (QFile::exists("lang/zh_cn.lang")) {
+			langSettings = new QSettings("lang/zh_cn.lang", QSettings::IniFormat);
+			currentLangCode = "zh_cn";
 		}
 		else {
 			// 如果没有语言文件，创建空的 QSettings
@@ -1249,9 +1249,9 @@ void UniversalTimer::scanLanguage() {
 
 	// 定义语言名称映射
 	QMap<QString, QString> langNameMap;
-	langNameMap["en_US"] = "English";
-	langNameMap["zh_CN"] = QString::fromUtf8("简体中文");
-	langNameMap["zh_TW"] = QString::fromUtf8("繁體中文");
+	langNameMap["en_us"] = "English";
+	langNameMap["zh_cn"] = QString::fromUtf8("简体中文");
+	langNameMap["zh_tw"] = QString::fromUtf8("繁體中文");
 
 	foreach(QString langFile, langFiles) {
 		QString langCode = langFile.left(langFile.length() - 5); // 移除 .lang 后缀
@@ -1275,8 +1275,8 @@ void UniversalTimer::scanLanguage() {
 
 	// 如果没有找到任何语言文件，添加默认选项
 	if (SettingLanguageCmb->count() == 0) {
-		SettingLanguageCmb->addItem("English", "en_US");
-		SettingLanguageCmb->addItem(QString::fromUtf8("简体中文"), "zh_CN");
+		SettingLanguageCmb->addItem("English", "en_us");
+		SettingLanguageCmb->addItem(QString::fromUtf8("简体中文"), "zh_cn");
 	}
 }
 
