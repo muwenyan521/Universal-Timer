@@ -4,7 +4,5 @@
         <file>img/down-arrow.png</file>
         <file>img/logo.black.2048px.png</file>
         <file>img/up-arrow.png</file>
-        <file>sounds/countdown.wav</file>
-        <file>sounds/heartbeat.wav</file>
     </qresource>
 </RCC>
